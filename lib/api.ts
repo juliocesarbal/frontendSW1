@@ -103,6 +103,11 @@ export const diagramAPI = {
     const response = await api.post(`/diagrams/${diagramId}/classes`, classData);
     return response.data;
   },
+
+  deleteDiagram: async (id: string): Promise<{ message: string }> => {
+    const response = await api.delete(`/diagrams/${id}`);
+    return response.data;
+  },
 };
 
 // AI Chat API
@@ -111,6 +116,8 @@ export const aiAPI = {
     const response = await api.post('/ai-chat/generate-uml', {
       prompt,
       diagramId,
+    }, {
+      timeout: 60000, // 60 segundos para generación IA
     });
     return response.data;
   },

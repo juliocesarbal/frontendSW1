@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Users, Calendar, FileText, ArrowLeft, Settings, Share } from 'lucide-react';
+import { Plus, Users, Calendar, FileText, ArrowLeft, Settings, Share, X, Trash2 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth';
 import { useWorkspaceStore } from '@/stores/workspace';
 import { diagramAPI } from '@/lib/api';
 import { Diagram } from '@/types/uml';
+import { workspaceAPI } from '@/lib/api';
 
 interface WorkspacePageProps {
   params: {
@@ -21,6 +22,13 @@ export default function WorkspacePage({ params }: WorkspacePageProps) {
   const [diagrams, setDiagrams] = useState<Diagram[]>([]);
   const [isCreatingDiagram, setIsCreatingDiagram] = useState(false);
   const [newDiagramName, setNewDiagramName] = useState('');
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [collaboratorEmail, setCollaboratorEmail] = useState('');
+  const [collaboratorRole, setCollaboratorRole] = useState<'EDITOR' | 'VIEWER'>('VIEWER');
+  const [isInviting, setIsInviting] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [diagramToDelete, setDiagramToDelete] = useState<Diagram | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -64,6 +72,60 @@ export default function WorkspacePage({ params }: WorkspacePageProps) {
     router.push(`/workspace/${params.workspaceId}/diagram/${diagramId}`);
   };
 
+  const handleInviteCollaborator = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!collaboratorEmail.trim()) return;
+
+    try {
+      setIsInviting(true);
+      await workspaceAPI.addCollaborator(params.workspaceId, collaboratorEmail, collaboratorRole);
+
+      // Refresh workspace data
+      await fetchWorkspaceById(params.workspaceId);
+
+      // Close modal and reset form
+      setIsShareModalOpen(false);
+      setCollaboratorEmail('');
+      setCollaboratorRole('VIEWER');
+
+      alert('Colaborador invitado exitosamente');
+    } catch (error: any) {
+      console.error('Error inviting collaborator:', error);
+      alert(error.response?.data?.message || 'Error al invitar colaborador');
+    } finally {
+      setIsInviting(false);
+    }
+  };
+
+  const handleDeleteDiagram = async () => {
+    if (!diagramToDelete) return;
+
+    try {
+      setIsDeleting(true);
+      await diagramAPI.deleteDiagram(diagramToDelete.id);
+
+      // Remove from local state
+      setDiagrams(prev => prev.filter(d => d.id !== diagramToDelete.id));
+
+      // Close modal
+      setIsDeleteModalOpen(false);
+      setDiagramToDelete(null);
+
+      alert('Diagrama eliminado exitosamente');
+    } catch (error: any) {
+      console.error('Error deleting diagram:', error);
+      alert(error.response?.data?.message || 'Error al eliminar diagrama');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const openDeleteModal = (diagram: Diagram, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card click
+    setDiagramToDelete(diagram);
+    setIsDeleteModalOpen(true);
+  };
+
   if (!user) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -104,13 +166,15 @@ export default function WorkspacePage({ params }: WorkspacePageProps) {
               </div>
             </div>
             <div className="flex items-center space-x-3">
-              <button className="flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors">
+              <button
+                onClick={() => setIsShareModalOpen(true)}
+                className="flex items-center space-x-2 px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors">
                 <Share size={16} />
-                <span>Share</span>
+                <span>Compartir</span>
               </button>
-              <button className="flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors">
+              <button className="flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors">
                 <Settings size={16} />
-                <span>Settings</span>
+                <span>Configuración</span>
               </button>
             </div>
           </div>
@@ -225,11 +289,20 @@ export default function WorkspacePage({ params }: WorkspacePageProps) {
                     <div
                       key={diagram.id}
                       onClick={() => handleDiagramClick(diagram.id)}
-                      className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-colors"
+                      className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-colors relative group"
                     >
                       <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-medium text-gray-900 truncate">{diagram.name}</h4>
-                        <span className="text-xs text-gray-500">v{diagram.version}</span>
+                        <h4 className="font-medium text-gray-900 truncate pr-8">{diagram.name}</h4>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-xs text-gray-500">v{diagram.version}</span>
+                          <button
+                            onClick={(e) => openDeleteModal(diagram, e)}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-100 rounded"
+                            title="Eliminar diagrama"
+                          >
+                            <Trash2 size={16} className="text-red-600" />
+                          </button>
+                        </div>
                       </div>
                       <div className="text-sm text-gray-600 mb-3">
                         {diagram.data?.classes?.length || 0} classes •{' '}
@@ -292,6 +365,143 @@ export default function WorkspacePage({ params }: WorkspacePageProps) {
           )}
         </div>
       </main>
+
+      {/* Invite Collaborator Modal */}
+      {isShareModalOpen && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
+          <div className="relative bg-white rounded shadow-lg w-full max-w-md mx-4">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-800">Invitar Colaborador</h3>
+              <button
+                onClick={() => setIsShareModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600">
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleInviteCollaborator} className="p-6">
+              <div className="mb-4">
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                  Email del colaborador *
+                </label>
+                <input
+                  type="email"
+                  id="email"
+                  value={collaboratorEmail}
+                  onChange={(e) => setCollaboratorEmail(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-gray-500"
+                  placeholder="colaborador@ejemplo.com"
+                  required
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  El usuario debe estar registrado en la plataforma
+                </p>
+              </div>
+
+              <div className="mb-6">
+                <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-2">
+                  Rol
+                </label>
+                <select
+                  id="role"
+                  value={collaboratorRole}
+                  onChange={(e) => setCollaboratorRole(e.target.value as 'EDITOR' | 'VIEWER')}
+                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-gray-500">
+                  <option value="VIEWER">Viewer (Solo lectura)</option>
+                  <option value="EDITOR">Editor (Puede editar)</option>
+                </select>
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={() => setIsShareModalOpen(false)}
+                  className="px-4 py-2 border border-gray-300 rounded text-sm font-medium text-gray-700 hover:bg-gray-50">
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={!collaboratorEmail.trim() || isInviting}
+                  className="px-4 py-2 bg-gray-600 text-white rounded text-sm font-medium hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2">
+                  {isInviting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span>Invitando...</span>
+                    </>
+                  ) : (
+                    <span>Invitar</span>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Diagram Confirmation Modal */}
+      {isDeleteModalOpen && diagramToDelete && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
+          <div className="relative bg-white rounded shadow-lg w-full max-w-md mx-4">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-800">Confirmar Eliminación</h3>
+              <button
+                onClick={() => setIsDeleteModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600"
+                disabled={isDeleting}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6">
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="flex-shrink-0">
+                  <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
+                    <Trash2 className="h-6 w-6 text-red-600" />
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm text-gray-700">
+                    ¿Estás seguro de que deseas eliminar el diagrama{' '}
+                    <span className="font-semibold">"{diagramToDelete.name}"</span>?
+                  </p>
+                  <p className="mt-2 text-sm text-red-600">
+                    Esta acción no se puede deshacer.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-3 mt-6">
+                <button
+                  type="button"
+                  onClick={() => setIsDeleteModalOpen(false)}
+                  disabled={isDeleting}
+                  className="px-4 py-2 border border-gray-300 rounded text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleDeleteDiagram}
+                  disabled={isDeleting}
+                  className="px-4 py-2 bg-red-600 text-white rounded text-sm font-medium hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                >
+                  {isDeleting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span>Eliminando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 size={16} />
+                      <span>Eliminar</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

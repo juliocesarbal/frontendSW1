@@ -50,6 +50,8 @@ export interface UMLRelation {
   name?: string;
   sourceClassId: string;
   targetClassId: string;
+  sourceHandle?: string; // top, right, bottom, left
+  targetHandle?: string; // top, right, bottom, left
 }
 
 export interface Diagram {

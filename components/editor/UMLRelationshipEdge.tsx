@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { EdgeProps, getBezierPath, EdgeLabelRenderer, BaseEdge } from 'reactflow';
+import { EdgeProps, getSmoothStepPath, EdgeLabelRenderer, BaseEdge } from 'reactflow';
 
 interface UMLRelationshipData {
   label?: string;
@@ -25,13 +25,14 @@ export default function UMLRelationshipEdge({
   markerEnd,
   markerStart
 }: EdgeProps<UMLRelationshipData>) {
-  const [edgePath, labelX, labelY] = getBezierPath({
+  const [edgePath, labelX, labelY] = getSmoothStepPath({
     sourceX,
     sourceY,
     sourcePosition,
     targetX,
     targetY,
     targetPosition,
+    borderRadius: 8, // Esquinas redondeadas sutiles
   });
 
   const getEdgeStyle = () => {
@@ -203,7 +204,10 @@ export default function UMLRelationshipEdge({
         >
           {/* Relationship Label */}
           {data?.label && (
-            <div className="bg-white px-2 py-1 rounded shadow-sm border border-gray-200 text-xs font-medium text-gray-700">
+            <div
+              className="bg-white px-2 py-1 rounded shadow-sm border border-gray-300 text-xs font-medium text-gray-700 cursor-pointer hover:border-gray-400 hover:shadow transition-all"
+              title="Doble clic para editar"
+            >
               {data.label}
             </div>
           )}
@@ -212,12 +216,12 @@ export default function UMLRelationshipEdge({
           {data?.multiplicity && (
             <div className="flex justify-between mt-1 space-x-4">
               {data.multiplicity.source && (
-                <div className="bg-blue-50 px-1 py-0.5 rounded text-xs text-blue-700 font-mono">
+                <div className="bg-gray-100 px-1 py-0.5 rounded text-xs text-gray-700 font-mono border border-gray-300">
                   {data.multiplicity.source}
                 </div>
               )}
               {data.multiplicity.target && (
-                <div className="bg-blue-50 px-1 py-0.5 rounded text-xs text-blue-700 font-mono">
+                <div className="bg-gray-100 px-1 py-0.5 rounded text-xs text-gray-700 font-mono border border-gray-300">
                   {data.multiplicity.target}
                 </div>
               )}

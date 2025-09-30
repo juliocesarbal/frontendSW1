@@ -125,11 +125,17 @@ export default function AIChatInterface({ diagramId, onUMLGenerated, onClose, is
       setMessages(prev => [...prev, aiMessage]);
 
       // If the prompt seems like it wants UML generation, try to generate it
-      if (text.toLowerCase().includes('create') ||
-          text.toLowerCase().includes('design') ||
-          text.toLowerCase().includes('build') ||
-          text.toLowerCase().includes('generate')) {
+      const lowerText = text.toLowerCase();
+      const generationKeywords = [
+        'create', 'design', 'build', 'generate', 'make', 'construct',
+        'crear', 'diseñar', 'construir', 'generar', 'hacer', 'modelar',
+        'system', 'diagram', 'model', 'schema',
+        'sistema', 'diagrama', 'modelo', 'esquema'
+      ];
 
+      const shouldGenerateUML = generationKeywords.some(keyword => lowerText.includes(keyword));
+
+      if (shouldGenerateUML) {
         try {
           const umlResponse = await aiAPI.generateUML(text, diagramId);
 
@@ -184,9 +190,9 @@ export default function AIChatInterface({ diagramId, onUMLGenerated, onClose, is
   if (!isOpen) return null;
 
   return (
-    <div className="fixed right-4 bottom-4 w-96 h-[600px] bg-white rounded-lg shadow-2xl border border-gray-200 flex flex-col z-50">
+    <div className="w-full h-full bg-white flex flex-col max-h-[600px]">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-300 bg-gray-600 text-white rounded-t">
+      <div className="flex items-center justify-between p-3 border-b border-gray-300 bg-gray-600 text-white flex-shrink-0">
         <div className="flex items-center space-x-2">
           <Bot size={20} />
           <h3 className="font-semibold">Asistente UML IA</h3>
@@ -200,7 +206,7 @@ export default function AIChatInterface({ diagramId, onUMLGenerated, onClose, is
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
         {messages.map((message) => (
           <div key={message.id} className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div className={`max-w-[80%] rounded p-3 ${
@@ -262,7 +268,7 @@ export default function AIChatInterface({ diagramId, onUMLGenerated, onClose, is
       </div>
 
       {/* Input */}
-      <div className="p-4 border-t border-gray-200">
+      <div className="p-4 border-t border-gray-200 flex-shrink-0">
         <div className="flex items-center space-x-2">
           <input
             ref={inputRef}
@@ -294,7 +300,16 @@ export default function AIChatInterface({ diagramId, onUMLGenerated, onClose, is
         {/* Quick actions */}
         <div className="flex items-center justify-between mt-3 gap-2">
           <button
-            onClick={() => handleSendMessage("Crear un sistema e-commerce simple")}
+            onClick={() => handleSendMessage("Crear un sistema de farmacia")}
+            className="text-xs text-gray-600 hover:text-gray-800 transition-colors flex items-center space-x-1"
+            disabled={isLoading}
+          >
+            <Sparkles size={12} />
+            <span>Rápido: Farmacia</span>
+          </button>
+
+          <button
+            onClick={() => handleSendMessage("Diseñar un e-commerce")}
             className="text-xs text-gray-600 hover:text-gray-800 transition-colors flex items-center space-x-1"
             disabled={isLoading}
           >

@@ -115,10 +115,13 @@ const UMLClassNode = memo(({ data, selected }: NodeProps<UMLClassNodeData>) => {
                     {attr.stereotype === 'id' && (
                       <span className="text-gray-600 text-xs bg-gray-200 px-1 rounded">PK</span>
                     )}
-                    {attr.unique && attr.stereotype !== 'id' && (
+                    {attr.stereotype === 'fk' && (
+                      <span className="text-blue-600 text-xs bg-blue-100 px-1 rounded">FK</span>
+                    )}
+                    {attr.unique && attr.stereotype !== 'id' && attr.stereotype !== 'fk' && (
                       <span className="text-gray-600 text-xs bg-gray-200 px-1 rounded">UK</span>
                     )}
-                    {!attr.nullable && attr.stereotype !== 'id' && (
+                    {!attr.nullable && attr.stereotype !== 'id' && attr.stereotype !== 'fk' && (
                       <span className="text-gray-600 text-xs">*</span>
                     )}
                   </div>
@@ -161,29 +164,29 @@ const UMLClassNode = memo(({ data, selected }: NodeProps<UMLClassNodeData>) => {
         )}
       </div>
 
-      {/* Connection Handles - More subtle and better positioned */}
+      {/* Puntos de Conexión */}
       <Handle
         type="source"
         position={Position.Right}
-        className="w-3 h-3 border-2 border-white bg-gray-500 rounded-full opacity-0 hover:opacity-100 transition-opacity"
+        className="w-3 h-3 border-2 border-gray-300 bg-gray-600 rounded-full hover:bg-gray-700 hover:scale-125 transition-all"
         style={{ right: -6 }}
       />
       <Handle
         type="target"
         position={Position.Left}
-        className="w-3 h-3 border-2 border-white bg-gray-500 rounded-full opacity-0 hover:opacity-100 transition-opacity"
+        className="w-3 h-3 border-2 border-gray-300 bg-gray-600 rounded-full hover:bg-gray-700 hover:scale-125 transition-all"
         style={{ left: -6 }}
       />
       <Handle
         type="source"
         position={Position.Bottom}
-        className="w-3 h-3 border-2 border-white bg-gray-500 rounded-full opacity-0 hover:opacity-100 transition-opacity"
+        className="w-3 h-3 border-2 border-gray-300 bg-gray-600 rounded-full hover:bg-gray-700 hover:scale-125 transition-all"
         style={{ bottom: -6 }}
       />
       <Handle
         type="target"
         position={Position.Top}
-        className="w-3 h-3 border-2 border-white bg-gray-500 rounded-full opacity-0 hover:opacity-100 transition-opacity"
+        className="w-3 h-3 border-2 border-gray-300 bg-gray-600 rounded-full hover:bg-gray-700 hover:scale-125 transition-all"
         style={{ top: -6 }}
       />
     </div>

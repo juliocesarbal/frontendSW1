@@ -19,6 +19,7 @@ import 'reactflow/dist/style.css';
 import UMLClassNode from './UMLClassNode';
 import UMLToolbar from './UMLToolbar';
 import ClassEditor from './ClassEditor';
+import RelationshipEditor from './RelationshipEditor';
 import UMLSidebar from './UMLSidebar';
 import UMLRelationshipEdge from './UMLRelationshipEdge';
 import AIChatInterface from '../chat/AIChatInterface';
@@ -42,48 +43,148 @@ interface UMLEditorProps {
 }
 
 export default function UMLEditor({ diagram, workspaceId, userId, userName, onSave }: UMLEditorProps) {
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [nodes, setNodes, onNodesChangeBase] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [isEditingClass, setIsEditingClass] = useState(false);
+  const [selectedEdge, setSelectedEdge] = useState<any | null>(null);
+  const [isEditingRelationship, setIsEditingRelationship] = useState(false);
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(true);
 
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // WebSocket connection for real-time collaboration
   const { socket, isConnected, emit } = useSocket(process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:3001');
 
-  // Initialize diagram data
-  useEffect(() => {
-    if (diagram.data.classes) {
-      const initialNodes: Node[] = diagram.data.classes.map((umlClass) => ({
-        id: umlClass.id,
-        type: 'umlClass',
-        position: umlClass.position,
-        data: umlClass,
-      }));
-      setNodes(initialNodes);
-    }
+  // Handle save - defined early to be used by onNodesChange
+  const handleSave = useCallback(() => {
+    const diagramData = {
+      classes: nodes.map((node) => ({
+        ...node.data,
+        position: node.position, // Include position
+      } as UMLClass)),
+      relations: edges.map((edge) => ({
+        id: edge.id,
+        sourceClassId: edge.source,
+        targetClassId: edge.target,
+        type: edge.data?.type || 'ASSOCIATION',
+        name: edge.data?.label || '',
+        multiplicity: edge.data?.multiplicity ?
+          `${edge.data.multiplicity.source || ''}:${edge.data.multiplicity.target || ''}` :
+          undefined,
+        sourceHandle: edge.sourceHandle || undefined,
+        targetHandle: edge.targetHandle || undefined,
+      } as UMLRelation)),
+      metadata: {
+        lastModified: new Date().toISOString(),
+        modifiedBy: userId,
+      },
+    };
 
-    if (diagram.data.relations) {
-      const initialEdges: Edge[] = diagram.data.relations.map((relation) => ({
-        id: relation.id,
-        source: relation.sourceClassId,
-        target: relation.targetClassId,
-        type: 'umlRelationship',
-        data: {
-          label: relation.name,
-          type: relation.type as any,
-          multiplicity: relation.multiplicity ? {
-            source: relation.multiplicity.split(':')[0],
-            target: relation.multiplicity.split(':')[1]
-          } : undefined
-        }
-      }));
-      setEdges(initialEdges);
+    console.log('💾 Guardando diagrama con relaciones:', edges.map(e => ({
+      id: e.id,
+      label: e.data?.label,
+      type: e.data?.type,
+      multiplicity: e.data?.multiplicity
+    })));
+
+    onSave(diagramData);
+  }, [nodes, edges, onSave, userId]);
+
+  // Wrapper for onNodesChange to detect position changes and sync
+  const onNodesChange = useCallback((changes: any) => {
+    onNodesChangeBase(changes);
+
+    // Check if any change is a position change
+    const hasPositionChange = changes.some((change: any) =>
+      change.type === 'position' && change.dragging === false
+    );
+
+    if (hasPositionChange) {
+      console.log('📍 Posiciones actualizadas, guardando...');
+
+      // Clear previous timeout
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+
+      // Debounce save to avoid too many requests
+      saveTimeoutRef.current = setTimeout(() => {
+        // Get updated nodes after state change
+        setNodes((currentNodes) => {
+          // Broadcast position changes to collaborators
+          if (socket && isConnected) {
+            emit('diagram_change', {
+              diagramId: diagram.id,
+              userId,
+              changes: {
+                type: 'nodes',
+                nodes: currentNodes,
+              },
+            });
+            console.log('📡 Posiciones enviadas a colaboradores');
+          }
+
+          // Save to database
+          handleSave();
+
+          return currentNodes;
+        });
+      }, 500);
     }
-  }, [diagram, setNodes, setEdges]);
+  }, [onNodesChangeBase, socket, isConnected, emit, diagram.id, userId, setNodes, handleSave]);
+
+  // Initialize diagram data ONLY ONCE on mount
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  useEffect(() => {
+    // Solo inicializar una vez cuando el componente se monta
+    if (!isInitialized && diagram.data) {
+      console.log('🔄 Inicializando diagrama desde BD');
+
+      if (diagram.data.classes) {
+        const initialNodes: Node[] = diagram.data.classes.map((umlClass) => ({
+          id: umlClass.id,
+          type: 'umlClass',
+          position: umlClass.position,
+          data: umlClass,
+        }));
+        setNodes(initialNodes);
+        console.log('✅ Cargados', initialNodes.length, 'nodos desde BD');
+      }
+
+      if (diagram.data.relations) {
+        const initialEdges: Edge[] = diagram.data.relations.map((relation) => ({
+          id: relation.id,
+          source: relation.sourceClassId,
+          target: relation.targetClassId,
+          sourceHandle: relation.sourceHandle || null,
+          targetHandle: relation.targetHandle || null,
+          type: 'umlRelationship', // Usar edge type personalizado
+          data: {
+            label: relation.name,
+            type: relation.type as any,
+            multiplicity: relation.multiplicity ? {
+              source: relation.multiplicity.split(':')[0],
+              target: relation.multiplicity.split(':')[1]
+            } : undefined
+          }
+        }));
+        setEdges(initialEdges);
+        console.log('✅ Cargados', initialEdges.length, 'edges desde BD:', initialEdges.map(e => ({
+          id: e.id,
+          label: e.data?.label,
+          type: e.data?.type,
+          sourceHandle: e.sourceHandle,
+          targetHandle: e.targetHandle
+        })));
+      }
+
+      setIsInitialized(true);
+    }
+  }, [diagram.id, isInitialized]); // Solo depende del ID del diagrama
 
   // Join collaboration room when component mounts
   useEffect(() => {
@@ -96,14 +197,22 @@ export default function UMLEditor({ diagram, workspaceId, userId, userName, onSa
 
       // Listen for diagram changes from other users
       socket.on('diagram_change', (data) => {
-        console.log('Received diagram change:', data);
+        console.log('📥 Recibido cambio de diagrama:', data);
         // Apply changes from other users
         if (data.userId !== userId) {
           if (data.changes.type === 'nodes') {
+            console.log('🔄 Actualizando solo nodos');
             setNodes(data.changes.nodes);
           } else if (data.changes.type === 'edges') {
+            console.log('🔄 Actualizando solo edges');
+            setEdges(data.changes.edges);
+          } else if (data.changes.type === 'full_update') {
+            console.log('🔄 Actualización completa de diagrama');
+            setNodes(data.changes.nodes);
             setEdges(data.changes.edges);
           }
+        } else {
+          console.log('⏭️ Ignorando mi propio cambio');
         }
       });
 
@@ -163,6 +272,12 @@ export default function UMLEditor({ diagram, workspaceId, userId, userName, onSa
   // Handle node selection
   const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
     setSelectedNode(node);
+  }, []);
+
+  // Handle node double click to edit
+  const onNodeDoubleClick = useCallback((event: React.MouseEvent, node: Node) => {
+    setSelectedNode(node);
+    setIsEditingClass(true);
   }, []);
 
   // Handle adding new class
@@ -259,33 +374,56 @@ export default function UMLEditor({ diagram, workspaceId, userId, userName, onSa
     setSelectedNode(null);
   }, [setNodes, socket, isConnected, emit, diagram.id, userId]);
 
-  // Handle save
-  const handleSave = useCallback(() => {
-    const diagramData = {
-      classes: nodes.map((node) => node.data as UMLClass),
-      relations: edges.map((edge) => ({
-        id: edge.id,
-        sourceClassId: edge.source,
-        targetClassId: edge.target,
-        type: 'ASSOCIATION',
-        name: edge.label as string,
-      } as UMLRelation)),
-      metadata: {
-        lastModified: new Date().toISOString(),
-        modifiedBy: userId,
-      },
-    };
+  // Handle edge double click to edit relationship
+  const onEdgeDoubleClick = useCallback((event: React.MouseEvent, edge: any) => {
+    setSelectedEdge(edge);
+    setIsEditingRelationship(true);
+  }, []);
 
-    onSave(diagramData);
-  }, [nodes, edges, onSave, userId]);
+  // Handle relationship update
+  const onUpdateRelationship = useCallback((updatedRelationship: any) => {
+    setEdges((eds) => {
+      const updatedEdges = eds.map((edge) => {
+        if (edge.id === updatedRelationship.id) {
+          return {
+            ...edge,
+            data: {
+              label: updatedRelationship.label,
+              type: updatedRelationship.type,
+              multiplicity: updatedRelationship.multiplicity,
+            },
+          };
+        }
+        return edge;
+      });
+
+      // Broadcast change to other users
+      if (socket && isConnected) {
+        emit('diagram_change', {
+          diagramId: diagram.id,
+          userId,
+          changes: {
+            type: 'edges',
+            edges: updatedEdges,
+          },
+        });
+      }
+
+      return updatedEdges;
+    });
+    setIsEditingRelationship(false);
+    setSelectedEdge(null);
+  }, [setEdges, socket, isConnected, emit, diagram.id, userId]);
+
+  // handleSave is defined above, near the top of the component
 
   // Handle adding elements from sidebar
-  const handleAddElement = useCallback((element: any) => {
+  const handleAddElement = useCallback((element: any, position?: { x: number; y: number }) => {
     if (element.type === 'umlClass') {
       const newNode = {
         id: element.data.id,
         type: 'umlClass',
-        position: reactFlowInstance?.project({
+        position: position || reactFlowInstance?.project({
           x: window.innerWidth / 2 - 200,
           y: window.innerHeight / 2 - 100
         }) || { x: 200, y: 200 },
@@ -315,26 +453,28 @@ export default function UMLEditor({ diagram, workspaceId, userId, userName, onSa
 
       const elementData = event.dataTransfer.getData('application/json');
 
-      if (!elementData) {
+      if (!elementData || !reactFlowInstance || !reactFlowWrapper.current) {
         return;
       }
 
-      if (reactFlowInstance) {
-        const position = reactFlowInstance.project({
-          x: event.clientX - 320, // Account for sidebar width
-          y: event.clientY,
-        });
+      // Get the bounding rect to calculate correct position
+      const reactFlowBounds = reactFlowWrapper.current.getBoundingClientRect();
 
-        const element = JSON.parse(elementData);
-        const newElement = {
-          ...element,
-          data: {
-            ...element.data,
-            id: `${element.data.id}_${Date.now()}` // Make unique
-          }
-        };
-        handleAddElement(newElement);
-      }
+      const position = reactFlowInstance.project({
+        x: event.clientX - reactFlowBounds.left,
+        y: event.clientY - reactFlowBounds.top,
+      });
+
+      const element = JSON.parse(elementData);
+      const newElement = {
+        ...element,
+        data: {
+          ...element.data,
+          id: `${element.data.id}_${Date.now()}` // Make unique
+        }
+      };
+
+      handleAddElement(newElement, position);
     },
     [reactFlowInstance, handleAddElement]
   );
@@ -347,6 +487,8 @@ export default function UMLEditor({ diagram, workspaceId, userId, userName, onSa
   // Handle UML generation from AI
   const handleUMLGenerated = useCallback((umlModel: any) => {
     if (umlModel.classes) {
+      console.log('🤖 IA generó modelo:', umlModel);
+
       const newNodes = umlModel.classes.map((umlClass: any) => ({
         id: umlClass.id,
         type: 'umlClass',
@@ -365,13 +507,46 @@ export default function UMLEditor({ diagram, workspaceId, userId, userName, onSa
         }
       })) || [];
 
-      setNodes(newNodes);
-      setEdges(newEdges);
+      console.log('📊 Aplicando nodos:', newNodes.length, 'edges:', newEdges.length);
 
-      // Save the changes
-      handleSave();
+      // Update nodes and edges - IMPORTANT: Agregar a los existentes, no reemplazar
+      let finalNodes: any[] = [];
+      let finalEdges: any[] = [];
+
+      setNodes((existingNodes) => {
+        finalNodes = [...existingNodes, ...newNodes];
+        console.log('✅ Nodos totales después de IA:', finalNodes.length);
+        return finalNodes;
+      });
+
+      setEdges((existingEdges) => {
+        finalEdges = [...existingEdges, ...newEdges];
+        console.log('✅ Edges totales después de IA:', finalEdges.length);
+        return finalEdges;
+      });
+
+      // Wait a bit for state to update, then broadcast and save
+      setTimeout(() => {
+        // Broadcast to collaborators
+        if (socket && isConnected) {
+          emit('diagram_change', {
+            diagramId: diagram.id,
+            userId,
+            changes: {
+              type: 'full_update',
+              nodes: finalNodes,
+              edges: finalEdges,
+            },
+          });
+          console.log('📡 Cambios enviados por WebSocket');
+        }
+
+        // Save to database
+        handleSave();
+        console.log('💾 Diagrama guardado en BD');
+      }, 500);
     }
-  }, [setNodes, setEdges, handleSave]);
+  }, [setNodes, setEdges, handleSave, socket, isConnected, emit, diagram.id, userId]);
 
   return (
     <div className="h-full w-full flex">
@@ -404,13 +579,18 @@ export default function UMLEditor({ diagram, workspaceId, userId, userName, onSa
               onEdgesChange={onEdgesChange}
               onConnect={onConnect}
               onNodeClick={onNodeClick}
-              onDoubleClick={onPaneDoubleClick}
+              onNodeDoubleClick={onNodeDoubleClick}
+              onEdgeDoubleClick={onEdgeDoubleClick}
               onInit={setReactFlowInstance}
               nodeTypes={nodeTypes}
               edgeTypes={edgeTypes}
               fitView
               className="bg-gray-50"
               connectionLineStyle={{ stroke: '#6b7280', strokeWidth: 2 }}
+              defaultEdgeOptions={{
+                type: 'smoothstep', // Líneas rectas con esquinas de 90°
+                style: { strokeWidth: 2, stroke: '#6b7280' },
+              }}
               snapToGrid={true}
               snapGrid={[20, 20]}
             >
@@ -425,10 +605,9 @@ export default function UMLEditor({ diagram, workspaceId, userId, userName, onSa
                 position="bottom-right"
               />
               <Background
-                color="#d1d5db"
+                color="#9ca3af"
                 gap={20}
-                size={1}
-                className="opacity-30"
+                size={2}
               />
             </ReactFlow>
           </div>
@@ -454,12 +633,26 @@ export default function UMLEditor({ diagram, workspaceId, userId, userName, onSa
               onCancel={() => setIsEditingClass(false)}
             />
           )}
+
+          {/* Modal Editor de Relación */}
+          {isEditingRelationship && selectedEdge && (
+            <RelationshipEditor
+              relationship={{
+                id: selectedEdge.id,
+                label: selectedEdge.data?.label,
+                type: selectedEdge.data?.type,
+                multiplicity: selectedEdge.data?.multiplicity,
+              }}
+              onSave={onUpdateRelationship}
+              onCancel={() => setIsEditingRelationship(false)}
+            />
+          )}
         </div>
       </div>
 
       {/* Lado Derecho - Chat IA */}
       {isChatOpen && (
-        <div className="w-96 border-l border-gray-300 bg-white">
+        <div className="w-80 border-l border-gray-300 bg-white flex-shrink-0">
           <AIChatInterface
             diagramId={diagram.id}
             onUMLGenerated={handleUMLGenerated}

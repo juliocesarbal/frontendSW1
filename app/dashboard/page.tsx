@@ -169,18 +169,24 @@ export default function DashboardPage() {
                         {workspaces.collaborated.map((workspace) => (
                           <div
                             key={workspace.id}
-                            className="border border-gray-200 rounded-md p-4 hover:bg-gray-50 cursor-pointer"
+                            onClick={() => router.push(`/workspace/${workspace.id}`)}
+                            className="border border-gray-200 rounded-md p-4 hover:bg-gray-50 cursor-pointer transition-colors"
                           >
-                            <h4 className="font-medium text-gray-900">
-                              {workspace.name}
-                            </h4>
+                            <div className="flex items-center justify-between mb-2">
+                              <h4 className="font-medium text-gray-900">
+                                {workspace.name}
+                              </h4>
+                              <span className="px-2 py-1 text-xs font-medium text-blue-700 bg-blue-100 rounded">
+                                Colaborador
+                              </span>
+                            </div>
                             <p className="text-sm text-gray-500">
                               {workspace.description}
                             </p>
                             <div className="mt-2 flex items-center text-xs text-gray-400">
-                              <span>Owner: {workspace.owner.name}</span>
+                              <span>Propietario: {workspace.owner.name}</span>
                               <span className="mx-2">•</span>
-                              <span>{workspace._count.diagrams} diagrams</span>
+                              <span>{workspace._count.diagrams} diagramas</span>
                             </div>
                           </div>
                         ))}

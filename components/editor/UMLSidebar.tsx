@@ -39,7 +39,7 @@ export default function UMLSidebar({ onAddElement }: { onAddElement: (element: a
       items: [
         {
           id: 'basic-class',
-          name: 'Clase Básica',
+          name: 'Clase',
           icon: <Box size={14} />,
           type: 'umlClass',
           data: {
@@ -50,132 +50,8 @@ export default function UMLSidebar({ onAddElement }: { onAddElement: (element: a
               { id: 'attr_1', name: 'id', type: 'Long', stereotype: 'id', nullable: false, unique: true }
             ],
             methods: [],
-            stereotypes: ['entity']
+            stereotypes: ['class']
           }
-        },
-        {
-          id: 'entity-class',
-          name: 'Clase Entidad',
-          icon: <Database size={14} />,
-          type: 'umlClass',
-          data: {
-            id: `entity_${Date.now()}`,
-            name: 'Entidad',
-            position: { x: 0, y: 0 },
-            attributes: [
-              { id: 'attr_1', name: 'id', type: 'Long', stereotype: 'id', nullable: false, unique: true },
-              { id: 'attr_2', name: 'nombre', type: 'String', nullable: false, unique: false },
-              { id: 'attr_3', name: 'fechaCreacion', type: 'LocalDateTime', nullable: false, unique: false }
-            ],
-            methods: [
-              { id: 'method_1', name: 'getId', returnType: 'Long', parameters: [], visibility: 'public' },
-              { id: 'method_2', name: 'setId', returnType: 'void', parameters: [{ name: 'id', type: 'Long' }], visibility: 'public' }
-            ],
-            stereotypes: ['entity']
-          }
-        },
-        {
-          id: 'service-class',
-          name: 'Clase Servicio',
-          icon: <Zap size={14} />,
-          type: 'umlClass',
-          data: {
-            id: `service_${Date.now()}`,
-            name: 'Servicio',
-            position: { x: 0, y: 0 },
-            attributes: [],
-            methods: [
-              { id: 'method_1', name: 'buscarTodos', returnType: 'List<Entidad>', parameters: [], visibility: 'public' },
-              { id: 'method_2', name: 'buscarPorId', returnType: 'Entidad', parameters: [{ name: 'id', type: 'Long' }], visibility: 'public' },
-              { id: 'method_3', name: 'guardar', returnType: 'Entidad', parameters: [{ name: 'entidad', type: 'Entidad' }], visibility: 'public' }
-            ],
-            stereotypes: ['service']
-          }
-        },
-        {
-          id: 'controller-class',
-          name: 'Clase Controlador',
-          icon: <Users size={14} />,
-          type: 'umlClass',
-          data: {
-            id: `controller_${Date.now()}`,
-            name: 'Controlador',
-            position: { x: 0, y: 0 },
-            attributes: [],
-            methods: [
-              { id: 'method_1', name: 'obtenerTodos', returnType: 'ResponseEntity<List<Entidad>>', parameters: [], visibility: 'public' },
-              { id: 'method_2', name: 'obtenerPorId', returnType: 'ResponseEntity<Entidad>', parameters: [{ name: 'id', type: 'Long' }], visibility: 'public' },
-              { id: 'method_3', name: 'crear', returnType: 'ResponseEntity<Entidad>', parameters: [{ name: 'entidad', type: 'Entidad' }], visibility: 'public' }
-            ],
-            stereotypes: ['controller']
-          }
-        }
-      ]
-    },
-    {
-      title: 'Interfaces',
-      icon: <FileText size={16} />,
-      isOpen: false,
-      items: [
-        {
-          id: 'repository-interface',
-          name: 'Repositorio',
-          icon: <FileText size={14} />,
-          type: 'umlClass',
-          data: {
-            id: `repository_${Date.now()}`,
-            name: 'Repositorio',
-            position: { x: 0, y: 0 },
-            attributes: [],
-            methods: [
-              { id: 'method_1', name: 'buscarTodos', returnType: 'List<T>', parameters: [], visibility: 'public' },
-              { id: 'method_2', name: 'buscarPorId', returnType: 'Optional<T>', parameters: [{ name: 'id', type: 'ID' }], visibility: 'public' },
-              { id: 'method_3', name: 'guardar', returnType: 'T', parameters: [{ name: 'entidad', type: 'T' }], visibility: 'public' }
-            ],
-            stereotypes: ['interface']
-          }
-        }
-      ]
-    },
-    {
-      title: 'Relaciones',
-      icon: <Layers size={16} />,
-      isOpen: true,
-      items: [
-        {
-          id: 'association',
-          name: 'Asociación',
-          icon: <div className="w-3 h-0.5 bg-gray-600"></div>,
-          type: 'relationship',
-          data: { type: 'ASSOCIATION', style: 'solid' }
-        },
-        {
-          id: 'aggregation',
-          name: 'Agregación',
-          icon: <Circle size={14} />,
-          type: 'relationship',
-          data: { type: 'AGGREGATION', style: 'solid' }
-        },
-        {
-          id: 'composition',
-          name: 'Composición',
-          icon: <Square size={14} />,
-          type: 'relationship',
-          data: { type: 'COMPOSITION', style: 'solid' }
-        },
-        {
-          id: 'inheritance',
-          name: 'Herencia',
-          icon: <Triangle size={14} />,
-          type: 'relationship',
-          data: { type: 'INHERITANCE', style: 'solid' }
-        },
-        {
-          id: 'dependency',
-          name: 'Dependencia',
-          icon: <div className="w-3 h-0.5 border-t border-dashed border-gray-600"></div>,
-          type: 'relationship',
-          data: { type: 'DEPENDENCY', style: 'dashed' }
         }
       ]
     }
@@ -188,13 +64,29 @@ export default function UMLSidebar({ onAddElement }: { onAddElement: (element: a
   };
 
   const handleDragStart = (e: React.DragEvent, item: UMLTemplate) => {
-    e.dataTransfer.setData('application/json', JSON.stringify(item));
+    // Create a new instance with unique ID for drag operation
+    const newItem = {
+      ...item,
+      data: {
+        ...item.data,
+        id: `class_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      }
+    };
+    e.dataTransfer.setData('application/json', JSON.stringify(newItem));
     e.dataTransfer.effectAllowed = 'copy';
   };
 
   const handleItemClick = (item: UMLTemplate) => {
     if (onAddElement) {
-      onAddElement(item);
+      // Create a new instance with unique ID for click operation
+      const newItem = {
+        ...item,
+        data: {
+          ...item.data,
+          id: `class_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+        }
+      };
+      onAddElement(newItem);
     }
   };
 

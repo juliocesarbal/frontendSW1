@@ -55,17 +55,13 @@ export default function DiagramPage({ params }: DiagramPageProps) {
 
     try {
       await diagramAPI.updateDiagram(diagram.id, diagramData);
-      console.log('Diagram saved successfully');
+      console.log('✅ Diagrama guardado en BD exitosamente');
 
-      // Update local state
-      setDiagram(prev => prev ? {
-        ...prev,
-        data: diagramData,
-        version: prev.version + 1,
-        updatedAt: new Date().toISOString(),
-      } : null);
+      // NO actualizar el estado de diagram para evitar re-renderizados
+      // que disparen la reinicialización del editor
+      // El editor mantiene su propio estado (nodes/edges)
     } catch (error: any) {
-      console.error('Error saving diagram:', error);
+      console.error('❌ Error guardando diagrama:', error);
       setError(error.response?.data?.message || 'Failed to save diagram');
     }
   };

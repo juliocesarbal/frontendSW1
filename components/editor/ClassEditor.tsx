@@ -85,10 +85,10 @@ export default function ClassEditor({ umlClass, onSave, onCancel }: ClassEditorP
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900 flex items-center">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gray-50">
+          <h2 className="text-xl font-semibold text-gray-800 flex items-center">
             <Database className="mr-2" size={20} />
-            Edit Class
+            Editar Clase
           </h2>
           <button
             onClick={onCancel}
@@ -172,7 +172,7 @@ export default function ClassEditor({ umlClass, onSave, onCancel }: ClassEditorP
                       />
                     </div>
 
-                    <div className="flex items-center space-x-3 mt-2">
+                    <div className="flex items-center flex-wrap gap-3 mt-2">
                       <label className="flex items-center text-sm">
                         <input
                           type="checkbox"
@@ -195,10 +195,31 @@ export default function ClassEditor({ umlClass, onSave, onCancel }: ClassEditorP
                         <input
                           type="checkbox"
                           checked={attr.stereotype === 'id'}
-                          onChange={(e) => updateAttribute(index, 'stereotype', e.target.checked ? 'id' : undefined)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              updateAttribute(index, 'stereotype', 'id');
+                            } else if (attr.stereotype === 'id') {
+                              updateAttribute(index, 'stereotype', undefined);
+                            }
+                          }}
                           className="mr-1"
                         />
                         Primary Key
+                      </label>
+                      <label className="flex items-center text-sm">
+                        <input
+                          type="checkbox"
+                          checked={attr.stereotype === 'fk'}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              updateAttribute(index, 'stereotype', 'fk');
+                            } else if (attr.stereotype === 'fk') {
+                              updateAttribute(index, 'stereotype', undefined);
+                            }
+                          }}
+                          className="mr-1"
+                        />
+                        Foreign Key
                       </label>
                     </div>
                   </div>
