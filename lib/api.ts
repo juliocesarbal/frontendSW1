@@ -119,6 +119,16 @@ export const aiAPI = {
     const response = await api.post('/ai-chat/chat', { message, context });
     return response.data;
   },
+
+  getSuggestions: async () => {
+    const response = await api.get('/ai-chat/suggestions');
+    return response.data;
+  },
+
+  getTemplates: async () => {
+    const response = await api.get('/ai-chat/templates');
+    return response.data;
+  },
 };
 
 // Code Generation API

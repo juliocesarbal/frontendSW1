@@ -4,6 +4,7 @@ export interface UMLClass {
   position: { x: number; y: number };
   attributes: UMLAttribute[];
   methods: UMLMethod[];
+  stereotypes?: string[];
 }
 
 export interface UMLAttribute {
@@ -36,6 +37,10 @@ export enum RelationType {
   AGGREGATION = 'AGGREGATION',
   DEPENDENCY = 'DEPENDENCY',
   REALIZATION = 'REALIZATION',
+  ONETOONE = 'OneToOne',
+  ONETOMANY = 'OneToMany',
+  MANYTOONE = 'ManyToOne',
+  MANYTOMANY = 'ManyToMany',
 }
 
 export interface UMLRelation {

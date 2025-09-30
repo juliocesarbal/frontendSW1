@@ -1,4 +1,5 @@
 import { User } from './auth';
+import { Diagram } from './uml';
 
 export enum Role {
   OWNER = 'OWNER',
@@ -14,6 +15,7 @@ export interface Workspace {
   updatedAt: string;
   owner: User;
   collaborators: WorkspaceCollaborator[];
+  diagrams?: Diagram[];
   _count: {
     collaborators: number;
     diagrams: number;

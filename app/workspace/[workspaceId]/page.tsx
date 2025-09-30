@@ -32,7 +32,12 @@ export default function WorkspacePage({ params }: WorkspacePageProps) {
 
   useEffect(() => {
     if (currentWorkspace?.diagrams) {
-      setDiagrams(currentWorkspace.diagrams);
+      // Ensure all diagrams have the required data structure
+      const validDiagrams = currentWorkspace.diagrams.map(diagram => ({
+        ...diagram,
+        data: diagram.data || { classes: [], relations: [] }
+      }));
+      setDiagrams(validDiagrams);
     }
   }, [currentWorkspace]);
 
@@ -227,8 +232,8 @@ export default function WorkspacePage({ params }: WorkspacePageProps) {
                         <span className="text-xs text-gray-500">v{diagram.version}</span>
                       </div>
                       <div className="text-sm text-gray-600 mb-3">
-                        {diagram.data.classes?.length || 0} classes •{' '}
-                        {diagram.data.relations?.length || 0} relations
+                        {diagram.data?.classes?.length || 0} classes •{' '}
+                        {diagram.data?.relations?.length || 0} relations
                       </div>
                       <div className="text-xs text-gray-400">
                         Updated {new Date(diagram.updatedAt).toLocaleDateString()}

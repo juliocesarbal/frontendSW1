@@ -19,26 +19,20 @@ interface AIChatInterfaceProps {
   isOpen: boolean;
 }
 
-const examplePrompts = [
-  "Create an e-commerce system with products, categories, and users",
-  "Design a library management system with books, authors, and borrowers",
-  "Build a blog platform with posts, comments, and tags",
-  "Create a restaurant ordering system with menus, orders, and customers",
-  "Design a social media platform with users, posts, and relationships"
-];
+interface Template {
+  id: string;
+  name: string;
+  description: string;
+  prompt: string;
+}
 
 export default function AIChatInterface({ diagramId, onUMLGenerated, onClose, isOpen }: AIChatInterfaceProps) {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: '1',
-      type: 'ai',
-      content: '👋 Hi! I\'m your UML AI assistant. I can help you create class diagrams from natural language descriptions. Try describing a system you want to model!',
-      timestamp: new Date(),
-      suggestions: examplePrompts.slice(0, 3)
-    }
-  ]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [showTemplates, setShowTemplates] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -48,12 +42,58 @@ export default function AIChatInterface({ diagramId, onUMLGenerated, onClose, is
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // Load initial data when opened
+  useEffect(() => {
+    if (isOpen && messages.length === 0) {
+      loadInitialData();
+    }
+  }, [isOpen]);
+
   // Focus input when opened
   useEffect(() => {
     if (isOpen && inputRef.current) {
       inputRef.current.focus();
     }
   }, [isOpen]);
+
+  const loadInitialData = async () => {
+    try {
+      // Load templates and suggestions
+      const [templatesResponse, suggestionsResponse] = await Promise.all([
+        aiAPI.getTemplates(),
+        aiAPI.getSuggestions()
+      ]);
+
+      setTemplates(templatesResponse.templates || []);
+      setSuggestions(suggestionsResponse.suggestions || []);
+
+      // Add welcome message with loaded suggestions
+      const welcomeMessage: ChatMessage = {
+        id: '1',
+        type: 'ai',
+        content: '👋 ¡Hola! Soy tu asistente UML con IA powered by Gemini AI. Puedo ayudarte a crear diagramas de clases desde descripciones en lenguaje natural. ¡Describe un sistema que quieras modelar!',
+        timestamp: new Date(),
+        suggestions: suggestionsResponse.suggestions?.slice(0, 3) || []
+      };
+
+      setMessages([welcomeMessage]);
+    } catch (error) {
+      console.error('Error loading initial data:', error);
+      // Fallback to static message
+      const fallbackMessage: ChatMessage = {
+        id: '1',
+        type: 'ai',
+        content: '👋 ¡Hola! Soy tu asistente UML con IA. Puedo ayudarte a crear diagramas de clases desde descripciones en lenguaje natural. ¡Describe un sistema que quieras modelar!',
+        timestamp: new Date(),
+        suggestions: [
+          'Crear un sistema e-commerce con productos, categorías y usuarios',
+          'Diseñar un sistema de gestión de biblioteca con libros, autores y prestamistas',
+          'Construir una plataforma de blog con posts, comentarios y etiquetas'
+        ]
+      };
+      setMessages([fallbackMessage]);
+    }
+  };
 
   const handleSendMessage = async (messageText?: string) => {
     const text = messageText || inputMessage.trim();
@@ -97,7 +137,7 @@ export default function AIChatInterface({ diagramId, onUMLGenerated, onClose, is
             const umlMessage: ChatMessage = {
               id: (Date.now() + 2).toString(),
               type: 'ai',
-              content: `✨ Great! I've generated a UML model for "${umlResponse.model.name}". Click the button below to apply it to your diagram.`,
+              content: `✨ ¡Excelente! He generado un modelo UML para "${umlResponse.model.name}". El diagrama se ha aplicado automáticamente.`,
               timestamp: new Date(),
             };
 
@@ -113,7 +153,7 @@ export default function AIChatInterface({ diagramId, onUMLGenerated, onClose, is
           const errorMessage: ChatMessage = {
             id: (Date.now() + 3).toString(),
             type: 'ai',
-            content: '⚠️ I had trouble generating the UML model. Could you please be more specific about the entities and their relationships?',
+            content: '⚠️ Tuve problemas generando el modelo UML. ¿Podrías ser más específico sobre las entidades y sus relaciones?',
             timestamp: new Date(),
           };
           setMessages(prev => [...prev, errorMessage]);
@@ -125,7 +165,7 @@ export default function AIChatInterface({ diagramId, onUMLGenerated, onClose, is
       const errorMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         type: 'ai',
-        content: '😅 Sorry, I\'m having trouble right now. Please try again in a moment.',
+        content: '😅 Lo siento, estoy teniendo problemas ahora. Por favor intenta de nuevo en un momento.',
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, errorMessage]);
@@ -146,10 +186,10 @@ export default function AIChatInterface({ diagramId, onUMLGenerated, onClose, is
   return (
     <div className="fixed right-4 bottom-4 w-96 h-[600px] bg-white rounded-lg shadow-2xl border border-gray-200 flex flex-col z-50">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-t-lg">
+      <div className="flex items-center justify-between p-4 border-b border-gray-300 bg-gray-600 text-white rounded-t">
         <div className="flex items-center space-x-2">
           <Bot size={20} />
-          <h3 className="font-semibold">UML AI Assistant</h3>
+          <h3 className="font-semibold">Asistente UML IA</h3>
         </div>
         <button
           onClick={onClose}
@@ -163,14 +203,14 @@ export default function AIChatInterface({ diagramId, onUMLGenerated, onClose, is
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((message) => (
           <div key={message.id} className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[80%] rounded-lg p-3 ${
+            <div className={`max-w-[80%] rounded p-3 ${
               message.type === 'user'
-                ? 'bg-blue-600 text-white'
+                ? 'bg-gray-600 text-white'
                 : 'bg-gray-100 text-gray-900'
             }`}>
               <div className="flex items-start space-x-2">
                 {message.type === 'ai' && (
-                  <Bot size={16} className="text-purple-600 mt-0.5 flex-shrink-0" />
+                  <Bot size={16} className="text-gray-600 mt-0.5 flex-shrink-0" />
                 )}
                 {message.type === 'user' && (
                   <User size={16} className="text-white mt-0.5 flex-shrink-0" />
@@ -183,7 +223,7 @@ export default function AIChatInterface({ diagramId, onUMLGenerated, onClose, is
                     <div className="mt-3 space-y-2">
                       <div className="flex items-center space-x-1 text-xs text-gray-600">
                         <Lightbulb size={12} />
-                        <span>Try these examples:</span>
+                        <span>Prueba estos ejemplos:</span>
                       </div>
                       {message.suggestions.map((suggestion, index) => (
                         <button
@@ -210,9 +250,9 @@ export default function AIChatInterface({ diagramId, onUMLGenerated, onClose, is
           <div className="flex justify-start">
             <div className="bg-gray-100 rounded-lg p-3">
               <div className="flex items-center space-x-2">
-                <Bot size={16} className="text-purple-600" />
+                <Bot size={16} className="text-gray-600" />
                 <Loader2 size={16} className="animate-spin text-gray-600" />
-                <span className="text-sm text-gray-600">Thinking...</span>
+                <span className="text-sm text-gray-600">Pensando...</span>
               </div>
             </div>
           </div>
@@ -230,17 +270,17 @@ export default function AIChatInterface({ diagramId, onUMLGenerated, onClose, is
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder="Describe your UML diagram..."
-            className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+            placeholder="Describe tu diagrama UML..."
+            className="flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent text-sm"
             disabled={isLoading}
           />
           <button
             onClick={() => handleSendMessage()}
             disabled={!inputMessage.trim() || isLoading}
-            className={`p-2 rounded-md transition-colors ${
+            className={`p-2 rounded transition-colors ${
               !inputMessage.trim() || isLoading
                 ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                : 'bg-purple-600 text-white hover:bg-purple-700'
+                : 'bg-gray-600 text-white hover:bg-gray-700'
             }`}
           >
             {isLoading ? (
@@ -252,16 +292,48 @@ export default function AIChatInterface({ diagramId, onUMLGenerated, onClose, is
         </div>
 
         {/* Quick actions */}
-        <div className="flex items-center justify-center mt-2">
+        <div className="flex items-center justify-between mt-3 gap-2">
           <button
-            onClick={() => handleSendMessage("Create a simple e-commerce system")}
-            className="text-xs text-purple-600 hover:text-purple-800 transition-colors flex items-center space-x-1"
+            onClick={() => handleSendMessage("Crear un sistema e-commerce simple")}
+            className="text-xs text-gray-600 hover:text-gray-800 transition-colors flex items-center space-x-1"
             disabled={isLoading}
           >
             <Sparkles size={12} />
-            <span>Quick: E-commerce example</span>
+            <span>Rápido: E-commerce</span>
+          </button>
+
+          <button
+            onClick={() => setShowTemplates(!showTemplates)}
+            className="text-xs text-gray-600 hover:text-gray-800 transition-colors flex items-center space-x-1"
+            disabled={isLoading}
+          >
+            <Lightbulb size={12} />
+            <span>Plantillas</span>
           </button>
         </div>
+
+        {/* Templates dropdown */}
+        {showTemplates && templates.length > 0 && (
+          <div className="mt-2 p-2 bg-gray-50 rounded-md">
+            <div className="text-xs font-medium text-gray-700 mb-2">Plantillas Rápidas:</div>
+            <div className="grid grid-cols-1 gap-1">
+              {templates.map((template) => (
+                <button
+                  key={template.id}
+                  onClick={() => {
+                    handleSendMessage(template.prompt);
+                    setShowTemplates(false);
+                  }}
+                  className="text-left text-xs p-2 bg-white border border-gray-200 rounded hover:bg-gray-50 transition-colors"
+                  disabled={isLoading}
+                >
+                  <div className="font-medium text-gray-900">{template.name}</div>
+                  <div className="text-gray-600 truncate">{template.description}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
