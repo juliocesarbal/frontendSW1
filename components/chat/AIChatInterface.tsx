@@ -71,7 +71,7 @@ export default function AIChatInterface({ diagramId, onUMLGenerated, onClose, is
       const welcomeMessage: ChatMessage = {
         id: '1',
         type: 'ai',
-        content: '👋 ¡Hola! Soy tu asistente UML con IA powered by Gemini AI. Puedo ayudarte a crear diagramas de clases desde descripciones en lenguaje natural. ¡Describe un sistema que quieras modelar!',
+        content: '👋 ¡Hola! Soy tu asistente UML con IA powered by Claude 3 Haiku. Puedo ayudarte a crear diagramas de clases desde descripciones en lenguaje natural. ¡Describe un sistema que quieras modelar!',
         timestamp: new Date(),
         suggestions: suggestionsResponse.suggestions?.slice(0, 3) || []
       };
@@ -111,8 +111,8 @@ export default function AIChatInterface({ diagramId, onUMLGenerated, onClose, is
     setIsLoading(true);
 
     try {
-      // First, get AI response
-      const chatResponse = await aiAPI.chat(text);
+      // Get AI response with diagram context
+      const chatResponse = await aiAPI.chat(text, diagramId);
 
       const aiMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
@@ -124,46 +124,10 @@ export default function AIChatInterface({ diagramId, onUMLGenerated, onClose, is
 
       setMessages(prev => [...prev, aiMessage]);
 
-      // If the prompt seems like it wants UML generation, try to generate it
-      const lowerText = text.toLowerCase();
-      const generationKeywords = [
-        'create', 'design', 'build', 'generate', 'make', 'construct',
-        'crear', 'diseñar', 'construir', 'generar', 'hacer', 'modelar',
-        'system', 'diagram', 'model', 'schema',
-        'sistema', 'diagrama', 'modelo', 'esquema'
-      ];
-
-      const shouldGenerateUML = generationKeywords.some(keyword => lowerText.includes(keyword));
-
-      if (shouldGenerateUML) {
-        try {
-          const umlResponse = await aiAPI.generateUML(text, diagramId);
-
-          if (umlResponse.success && umlResponse.model) {
-            const umlMessage: ChatMessage = {
-              id: (Date.now() + 2).toString(),
-              type: 'ai',
-              content: `✨ ¡Excelente! He generado un modelo UML para "${umlResponse.model.name}". El diagrama se ha aplicado automáticamente.`,
-              timestamp: new Date(),
-            };
-
-            setMessages(prev => [...prev, umlMessage]);
-
-            // Call the callback to update the diagram
-            if (onUMLGenerated) {
-              onUMLGenerated(umlResponse.model);
-            }
-          }
-        } catch (umlError) {
-          console.error('UML generation error:', umlError);
-          const errorMessage: ChatMessage = {
-            id: (Date.now() + 3).toString(),
-            type: 'ai',
-            content: '⚠️ Tuve problemas generando el modelo UML. ¿Podrías ser más específico sobre las entidades y sus relaciones?',
-            timestamp: new Date(),
-          };
-          setMessages(prev => [...prev, errorMessage]);
-        }
+      // If the response includes a UML model, apply it automatically
+      if (chatResponse.model && onUMLGenerated) {
+        console.log('✅ Diagrama UML recibido, aplicando automáticamente:', chatResponse.model.name);
+        onUMLGenerated(chatResponse.model);
       }
 
     } catch (error) {

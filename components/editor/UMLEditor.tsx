@@ -58,7 +58,7 @@ export default function UMLEditor({ diagram, workspaceId, userId, userName, onSa
   // WebSocket connection for real-time collaboration
   const { socket, isConnected, emit } = useSocket(process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:3001');
 
-  // Handle save - defined early to be used by onNodesChange
+  // Handle save - defined early to be used by other functions
   const handleSave = useCallback(() => {
     const diagramData = {
       classes: nodes.map((node) => ({
@@ -92,6 +92,92 @@ export default function UMLEditor({ diagram, workspaceId, userId, userName, onSa
 
     onSave(diagramData);
   }, [nodes, edges, onSave, userId]);
+
+  // Handle Delete key to remove selected nodes and edges
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Delete' || event.key === 'Supr') {
+        // Evitar eliminar si estamos editando en un modal
+        if (isEditingClass || isEditingRelationship) return;
+
+        // Eliminar edge seleccionado
+        if (selectedEdge) {
+          console.log('🗑️ Eliminando relación:', selectedEdge.id);
+          setEdges((eds) => {
+            const updatedEdges = eds.filter((e) => e.id !== selectedEdge.id);
+
+            // Broadcast change
+            if (socket && isConnected) {
+              emit('diagram_change', {
+                diagramId: diagram.id,
+                userId,
+                changes: {
+                  type: 'edges',
+                  edges: updatedEdges,
+                },
+              });
+            }
+
+            // Save changes
+            setTimeout(() => handleSave(), 100);
+
+            return updatedEdges;
+          });
+
+          setSelectedEdge(null);
+        }
+        // Eliminar nodo seleccionado
+        else if (selectedNode) {
+          console.log('🗑️ Eliminando clase:', selectedNode.id);
+
+          // Primero eliminar todas las relaciones conectadas al nodo
+          setEdges((eds) => {
+            const updatedEdges = eds.filter(
+              (edge) => edge.source !== selectedNode.id && edge.target !== selectedNode.id
+            );
+            console.log(`🗑️ Eliminadas ${eds.length - updatedEdges.length} relaciones conectadas`);
+            return updatedEdges;
+          });
+
+          // Luego eliminar el nodo
+          setNodes((nds) => {
+            const updatedNodes = nds.filter((n) => n.id !== selectedNode.id);
+
+            // Broadcast change
+            if (socket && isConnected) {
+              emit('diagram_change', {
+                diagramId: diagram.id,
+                userId,
+                changes: {
+                  type: 'full_update',
+                  nodes: updatedNodes,
+                  edges: edges.filter(
+                    (edge) => edge.source !== selectedNode.id && edge.target !== selectedNode.id
+                  ),
+                },
+              });
+            }
+
+            // Save changes
+            setTimeout(() => handleSave(), 100);
+
+            return updatedNodes;
+          });
+
+          setSelectedNode(null);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedNode, selectedEdge, isEditingClass, isEditingRelationship, setNodes, setEdges, socket, isConnected, emit, diagram.id, userId, handleSave, edges]);
+
+  // Handle edge click to select
+  const onEdgeClick = useCallback((event: React.MouseEvent, edge: any) => {
+    setSelectedEdge(edge);
+    setSelectedNode(null); // Deselect node when selecting edge
+  }, []);
 
   // Wrapper for onNodesChange to detect position changes and sync
   const onNodesChange = useCallback((changes: any) => {
@@ -132,7 +218,7 @@ export default function UMLEditor({ diagram, workspaceId, userId, userName, onSa
 
           return currentNodes;
         });
-      }, 500);
+      }, 1500); // Increased to 1.5 seconds to reduce server load
     }
   }, [onNodesChangeBase, socket, isConnected, emit, diagram.id, userId, setNodes, handleSave]);
 
@@ -580,6 +666,7 @@ export default function UMLEditor({ diagram, workspaceId, userId, userName, onSa
               onConnect={onConnect}
               onNodeClick={onNodeClick}
               onNodeDoubleClick={onNodeDoubleClick}
+              onEdgeClick={onEdgeClick}
               onEdgeDoubleClick={onEdgeDoubleClick}
               onInit={setReactFlowInstance}
               nodeTypes={nodeTypes}

@@ -54,6 +54,13 @@ export default function DiagramPage({ params }: DiagramPageProps) {
     if (!diagram) return;
 
     try {
+      console.log('💾 Intentando guardar diagrama:', {
+        diagramId: diagram.id,
+        dataKeys: Object.keys(diagramData),
+        classesCount: diagramData.classes?.length,
+        relationsCount: diagramData.relations?.length
+      });
+
       await diagramAPI.updateDiagram(diagram.id, diagramData);
       console.log('✅ Diagrama guardado en BD exitosamente');
 
@@ -62,7 +69,13 @@ export default function DiagramPage({ params }: DiagramPageProps) {
       // El editor mantiene su propio estado (nodes/edges)
     } catch (error: any) {
       console.error('❌ Error guardando diagrama:', error);
-      setError(error.response?.data?.message || 'Failed to save diagram');
+      console.error('❌ Error detalles:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        statusText: error.response?.statusText
+      });
+      setError(error.response?.data?.message || error.message || 'Failed to save diagram');
     }
   };
 

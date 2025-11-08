@@ -95,7 +95,9 @@ export const diagramAPI = {
   },
 
   updateDiagram: async (id: string, data: any): Promise<Diagram> => {
-    const response = await api.put(`/diagrams/${id}`, { data });
+    const response = await api.put(`/diagrams/${id}`, { data }, {
+      timeout: 30000, // 30 segundos para guardado de diagrama
+    });
     return response.data;
   },
 
@@ -122,8 +124,10 @@ export const aiAPI = {
     return response.data;
   },
 
-  chat: async (message: string, context?: any) => {
-    const response = await api.post('/ai-chat/chat', { message, context });
+  chat: async (message: string, diagramId?: string) => {
+    const response = await api.post('/ai-chat/chat', { message, diagramId }, {
+      timeout: 30000, // 30 segundos para chat con Claude
+    });
     return response.data;
   },
 

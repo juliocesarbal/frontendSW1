@@ -23,7 +23,8 @@ export default function UMLRelationshipEdge({
   style = {},
   data,
   markerEnd,
-  markerStart
+  markerStart,
+  selected
 }: EdgeProps<UMLRelationshipData>) {
   const [edgePath, labelX, labelY] = getSmoothStepPath({
     sourceX,
@@ -37,7 +38,8 @@ export default function UMLRelationshipEdge({
 
   const getEdgeStyle = () => {
     const baseStyle = {
-      strokeWidth: 2,
+      strokeWidth: selected ? 3 : 2,
+      stroke: selected ? '#374151' : '#6b7280',
       ...style
     };
 
@@ -47,31 +49,22 @@ export default function UMLRelationshipEdge({
         return {
           ...baseStyle,
           strokeDasharray: '5,5',
-          stroke: '#6b7280'
         };
       case 'INHERITANCE':
         return {
           ...baseStyle,
-          stroke: '#6b7280',
-          strokeWidth: 2
         };
       case 'COMPOSITION':
         return {
           ...baseStyle,
-          stroke: '#6b7280',
-          strokeWidth: 2
         };
       case 'AGGREGATION':
         return {
           ...baseStyle,
-          stroke: '#6b7280',
-          strokeWidth: 2
         };
       default: // ASSOCIATION
         return {
           ...baseStyle,
-          stroke: '#6b7280',
-          strokeWidth: 2
         };
     }
   };
@@ -205,10 +198,19 @@ export default function UMLRelationshipEdge({
           {/* Relationship Label */}
           {data?.label && (
             <div
-              className="bg-white px-2 py-1 rounded shadow-sm border border-gray-300 text-xs font-medium text-gray-700 cursor-pointer hover:border-gray-400 hover:shadow transition-all"
-              title="Doble clic para editar"
+              className={`px-2 py-1 rounded shadow-sm border text-xs font-medium cursor-pointer hover:shadow transition-all ${
+                selected
+                  ? 'bg-gray-600 text-white border-gray-700 shadow-md'
+                  : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
+              }`}
+              title="Doble clic para editar, Delete para eliminar"
             >
               {data.label}
+              {selected && data.type && (
+                <div className="text-xs text-gray-200 mt-0.5">
+                  {data.type}
+                </div>
+              )}
             </div>
           )}
 

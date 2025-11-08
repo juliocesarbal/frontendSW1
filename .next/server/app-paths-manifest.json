@@ -1,3 +1,9 @@
 {
-  "/workspace/[workspaceId]/page": "app/workspace/[workspaceId]/page.js"
+  "/_not-found/page": "app/_not-found/page.js",
+  "/page": "app/page.js",
+  "/login/page": "app/login/page.js",
+  "/dashboard/page": "app/dashboard/page.js",
+  "/workspace/[workspaceId]/diagram/[diagramId]/page": "app/workspace/[workspaceId]/diagram/[diagramId]/page.js",
+  "/workspace/[workspaceId]/page": "app/workspace/[workspaceId]/page.js",
+  "/register/page": "app/register/page.js"
 }
