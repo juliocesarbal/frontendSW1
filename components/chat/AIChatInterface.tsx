@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, Sparkles, Loader2, X, Lightbulb } from 'lucide-react';
+import { Send, Bot, User, Sparkles, Loader2, X, Lightbulb, Image as ImageIcon } from 'lucide-react';
 import { aiAPI } from '@/lib/api';
 
 interface ChatMessage {
@@ -10,6 +10,7 @@ interface ChatMessage {
   content: string;
   timestamp: Date;
   suggestions?: string[];
+  imageUrl?: string;
 }
 
 interface AIChatInterfaceProps {
@@ -33,9 +34,12 @@ export default function AIChatInterface({ diagramId, onUMLGenerated, onClose, is
   const [templates, setTemplates] = useState<Template[]>([]);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showTemplates, setShowTemplates] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -95,24 +99,59 @@ export default function AIChatInterface({ diagramId, onUMLGenerated, onClose, is
     }
   };
 
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validar que sea una imagen
+    if (!file.type.startsWith('image/')) {
+      alert('Por favor selecciona un archivo de imagen válido');
+      return;
+    }
+
+    // Leer el archivo como base64
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result as string;
+      setSelectedImage(base64String);
+      setImagePreview(base64String);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveImage = () => {
+    setSelectedImage(null);
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   const handleSendMessage = async (messageText?: string) => {
     const text = messageText || inputMessage.trim();
-    if (!text || isLoading) return;
+    if ((!text && !selectedImage) || isLoading) return;
 
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
       type: 'user',
-      content: text,
+      content: text || '📷 Imagen de diagrama enviada',
       timestamp: new Date(),
+      imageUrl: imagePreview || undefined,
     };
 
     setMessages(prev => [...prev, userMessage]);
     setInputMessage('');
+    const imageToSend = selectedImage;
+    setSelectedImage(null);
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
     setIsLoading(true);
 
     try {
-      // Get AI response with diagram context
-      const chatResponse = await aiAPI.chat(text, diagramId);
+      // Get AI response with diagram context and image if provided
+      const chatResponse = await aiAPI.chat(text || 'Analiza este diagrama', diagramId, imageToSend || undefined);
 
       const aiMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
@@ -186,6 +225,17 @@ export default function AIChatInterface({ diagramId, onUMLGenerated, onClose, is
                   <User size={16} className="text-white mt-0.5 flex-shrink-0" />
                 )}
                 <div className="flex-1">
+                  {/* Image preview in message */}
+                  {message.imageUrl && (
+                    <div className="mb-2">
+                      <img
+                        src={message.imageUrl}
+                        alt="Diagrama enviado"
+                        className="max-w-full h-auto rounded border border-gray-300"
+                        style={{ maxHeight: '200px' }}
+                      />
+                    </div>
+                  )}
                   <p className="text-sm whitespace-pre-wrap">{message.content}</p>
 
                   {/* Suggestions */}
@@ -233,22 +283,58 @@ export default function AIChatInterface({ diagramId, onUMLGenerated, onClose, is
 
       {/* Input */}
       <div className="p-4 border-t border-gray-200 flex-shrink-0">
+        {/* Image Preview */}
+        {imagePreview && (
+          <div className="mb-2 relative inline-block">
+            <img
+              src={imagePreview}
+              alt="Vista previa"
+              className="max-h-24 rounded border border-gray-300"
+            />
+            <button
+              onClick={handleRemoveImage}
+              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+            >
+              <X size={12} />
+            </button>
+          </div>
+        )}
+
         <div className="flex items-center space-x-2">
+          {/* Hidden file input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleImageSelect}
+            className="hidden"
+          />
+
+          {/* Image upload button */}
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isLoading}
+            className="p-2 rounded border border-gray-300 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Subir imagen de diagrama"
+          >
+            <ImageIcon size={16} className="text-gray-600" />
+          </button>
+
           <input
             ref={inputRef}
             type="text"
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder="Describe tu diagrama UML..."
+            placeholder="Describe tu diagrama o sube una imagen..."
             className="flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent text-sm"
             disabled={isLoading}
           />
           <button
             onClick={() => handleSendMessage()}
-            disabled={!inputMessage.trim() || isLoading}
+            disabled={(!inputMessage.trim() && !selectedImage) || isLoading}
             className={`p-2 rounded transition-colors ${
-              !inputMessage.trim() || isLoading
+              (!inputMessage.trim() && !selectedImage) || isLoading
                 ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                 : 'bg-gray-600 text-white hover:bg-gray-700'
             }`}

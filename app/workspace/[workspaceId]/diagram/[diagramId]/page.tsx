@@ -83,16 +83,23 @@ export default function DiagramPage({ params }: DiagramPageProps) {
   const handleUMLGenerated = (umlModel: any) => {
     if (!diagram) return;
 
+    console.log('🎯 Aplicando modelo UML generado:', umlModel);
+
     // Convert AI model to diagram format
     const updatedData = {
       ...diagram.data,
       classes: umlModel.classes || [],
-      relations: umlModel.associations || [],
+      relations: umlModel.relations || [],
       metadata: {
         ...diagram.data.metadata,
         lastAIGeneration: new Date().toISOString(),
       },
     };
+
+    console.log('📊 Datos actualizados del diagrama:', {
+      classes: updatedData.classes.length,
+      relations: updatedData.relations.length
+    });
 
     setDiagram(prev => prev ? {
       ...prev,

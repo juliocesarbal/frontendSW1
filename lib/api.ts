@@ -124,9 +124,9 @@ export const aiAPI = {
     return response.data;
   },
 
-  chat: async (message: string, diagramId?: string) => {
-    const response = await api.post('/ai-chat/chat', { message, diagramId }, {
-      timeout: 30000, // 30 segundos para chat con Claude
+  chat: async (message: string, diagramId?: string, image?: string) => {
+    const response = await api.post('/ai-chat/chat', { message, diagramId, image }, {
+      timeout: 60000, // 60 segundos para chat con Claude (con imagen puede tardar más)
     });
     return response.data;
   },
