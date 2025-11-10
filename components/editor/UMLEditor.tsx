@@ -13,6 +13,8 @@ import ReactFlow, {
   MiniMap,
   ReactFlowProvider,
   ReactFlowInstance,
+  updateEdge,
+  OnEdgeUpdateFunc,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 
@@ -475,6 +477,45 @@ export default function UMLEditor({ diagram, workspaceId, userId, userName, onSa
     [setEdges, socket, isConnected, emit, diagram.id, userId]
   );
 
+  // Handle edge reconnection (moving connection points)
+  const onEdgeUpdate: OnEdgeUpdateFunc = useCallback(
+    (oldEdge, newConnection) => {
+      console.log('🔄 Reconectando edge:', {
+        edgeId: oldEdge.id,
+        oldSource: oldEdge.source,
+        oldTarget: oldEdge.target,
+        oldSourceHandle: oldEdge.sourceHandle,
+        oldTargetHandle: oldEdge.targetHandle,
+        newSource: newConnection.source,
+        newTarget: newConnection.target,
+        newSourceHandle: newConnection.sourceHandle,
+        newTargetHandle: newConnection.targetHandle,
+      });
+
+      setEdges((eds) => {
+        const updatedEdges = updateEdge(oldEdge, newConnection, eds);
+
+        // Broadcast change to other users
+        if (socket && isConnected) {
+          emit('diagram_change', {
+            diagramId: diagram.id,
+            userId,
+            changes: {
+              type: 'edges',
+              edges: updatedEdges,
+            },
+          });
+        }
+
+        // Auto-save after reconnection
+        setTimeout(() => handleSave(), 300);
+
+        return updatedEdges;
+      });
+    },
+    [setEdges, socket, isConnected, emit, diagram.id, userId, handleSave]
+  );
+
   // Handle node selection
   const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
     setSelectedNode(node);
@@ -846,6 +887,7 @@ export default function UMLEditor({ diagram, workspaceId, userId, userName, onSa
               onNodesChange={onNodesChange}
               onEdgesChange={onEdgesChange}
               onConnect={onConnect}
+              onEdgeUpdate={onEdgeUpdate}
               onNodeClick={onNodeClick}
               onNodeDoubleClick={onNodeDoubleClick}
               onEdgeClick={onEdgeClick}
@@ -853,6 +895,8 @@ export default function UMLEditor({ diagram, workspaceId, userId, userName, onSa
               onInit={setReactFlowInstance}
               nodeTypes={nodeTypes}
               edgeTypes={edgeTypes}
+              edgeUpdaterRadius={15}
+              edgesUpdatable={true}
               fitView
               className="bg-gray-50"
               connectionLineStyle={{ stroke: '#6b7280', strokeWidth: 2 }}

@@ -164,30 +164,79 @@ const UMLClassNode = memo(({ data, selected }: NodeProps<UMLClassNodeData>) => {
         )}
       </div>
 
-      {/* Puntos de Conexión */}
+      {/* Puntos de Conexión - 2 handles por lado: 1 source + 1 target */}
+      {/* Source (salida) y Target (entrada) separados claramente */}
+
+      {/* RIGHT - Source arriba, Target abajo */}
       <Handle
         type="source"
         position={Position.Right}
-        className="w-3 h-3 border-2 border-gray-300 bg-gray-600 rounded-full hover:bg-gray-700 hover:scale-125 transition-all"
-        style={{ right: -6 }}
+        id="right-source"
+        className="w-3 h-3 border-2 border-blue-400 bg-blue-600 rounded-full hover:bg-blue-700 hover:scale-125 transition-all"
+        style={{ right: -6, top: '35%' }}
+        title="Salida"
+      />
+      <Handle
+        type="target"
+        position={Position.Right}
+        id="right-target"
+        className="w-3 h-3 border-2 border-green-400 bg-green-600 rounded-full hover:bg-green-700 hover:scale-125 transition-all"
+        style={{ right: -6, top: '65%' }}
+        title="Entrada"
+      />
+
+      {/* LEFT - Source arriba, Target abajo */}
+      <Handle
+        type="source"
+        position={Position.Left}
+        id="left-source"
+        className="w-3 h-3 border-2 border-blue-400 bg-blue-600 rounded-full hover:bg-blue-700 hover:scale-125 transition-all"
+        style={{ left: -6, top: '35%' }}
+        title="Salida"
       />
       <Handle
         type="target"
         position={Position.Left}
-        className="w-3 h-3 border-2 border-gray-300 bg-gray-600 rounded-full hover:bg-gray-700 hover:scale-125 transition-all"
-        style={{ left: -6 }}
+        id="left-target"
+        className="w-3 h-3 border-2 border-green-400 bg-green-600 rounded-full hover:bg-green-700 hover:scale-125 transition-all"
+        style={{ left: -6, top: '65%' }}
+        title="Entrada"
       />
+
+      {/* BOTTOM - Source izquierda, Target derecha */}
       <Handle
         type="source"
         position={Position.Bottom}
-        className="w-3 h-3 border-2 border-gray-300 bg-gray-600 rounded-full hover:bg-gray-700 hover:scale-125 transition-all"
-        style={{ bottom: -6 }}
+        id="bottom-source"
+        className="w-3 h-3 border-2 border-blue-400 bg-blue-600 rounded-full hover:bg-blue-700 hover:scale-125 transition-all"
+        style={{ bottom: -6, left: '35%' }}
+        title="Salida"
+      />
+      <Handle
+        type="target"
+        position={Position.Bottom}
+        id="bottom-target"
+        className="w-3 h-3 border-2 border-green-400 bg-green-600 rounded-full hover:bg-green-700 hover:scale-125 transition-all"
+        style={{ bottom: -6, left: '65%' }}
+        title="Entrada"
+      />
+
+      {/* TOP - Source izquierda, Target derecha */}
+      <Handle
+        type="source"
+        position={Position.Top}
+        id="top-source"
+        className="w-3 h-3 border-2 border-blue-400 bg-blue-600 rounded-full hover:bg-blue-700 hover:scale-125 transition-all"
+        style={{ top: -6, left: '35%' }}
+        title="Salida"
       />
       <Handle
         type="target"
         position={Position.Top}
-        className="w-3 h-3 border-2 border-gray-300 bg-gray-600 rounded-full hover:bg-gray-700 hover:scale-125 transition-all"
-        style={{ top: -6 }}
+        id="top-target"
+        className="w-3 h-3 border-2 border-green-400 bg-green-600 rounded-full hover:bg-green-700 hover:scale-125 transition-all"
+        style={{ top: -6, left: '65%' }}
+        title="Entrada"
       />
     </div>
   );

@@ -40,6 +40,26 @@ export default function UMLRelationshipEdge({
     borderRadius: 8, // Esquinas redondeadas sutiles
   });
 
+  // Calcular offset para alejar multiplicidades de los nodos
+  const offsetDistance = 35; // Distancia en píxeles desde el nodo
+
+  // Calcular dirección del source al target
+  const dx = targetX - sourceX;
+  const dy = targetY - sourceY;
+  const length = Math.sqrt(dx * dx + dy * dy);
+
+  // Normalizar y aplicar offset
+  const sourceOffsetX = (dx / length) * offsetDistance;
+  const sourceOffsetY = (dy / length) * offsetDistance;
+  const targetOffsetX = -(dx / length) * offsetDistance;
+  const targetOffsetY = -(dy / length) * offsetDistance;
+
+  // Posiciones ajustadas de las multiplicidades
+  const sourceMultiplicityX = sourceX + sourceOffsetX;
+  const sourceMultiplicityY = sourceY + sourceOffsetY;
+  const targetMultiplicityX = targetX + targetOffsetX;
+  const targetMultiplicityY = targetY + targetOffsetY;
+
   // Detectar relación muchos a muchos
   const isManyToMany = () => {
     const source = data?.multiplicity?.source || '';
@@ -283,12 +303,12 @@ export default function UMLRelationshipEdge({
           </div>
         )}
 
-        {/* Multiplicidad en extremo origen (source) */}
+        {/* Multiplicidad en extremo origen (source) - ALEJADA DEL NODO */}
         {data?.multiplicity?.source && (
           <div
             style={{
               position: 'absolute',
-              transform: `translate(-50%, -50%) translate(${sourceX}px,${sourceY}px)`,
+              transform: `translate(-50%, -50%) translate(${sourceMultiplicityX}px,${sourceMultiplicityY}px)`,
               fontSize: 11,
               pointerEvents: 'none',
             }}
@@ -300,12 +320,12 @@ export default function UMLRelationshipEdge({
           </div>
         )}
 
-        {/* Multiplicidad en extremo destino (target) */}
+        {/* Multiplicidad en extremo destino (target) - ALEJADA DEL NODO */}
         {data?.multiplicity?.target && (
           <div
             style={{
               position: 'absolute',
-              transform: `translate(-50%, -50%) translate(${targetX}px,${targetY}px)`,
+              transform: `translate(-50%, -50%) translate(${targetMultiplicityX}px,${targetMultiplicityY}px)`,
               fontSize: 11,
               pointerEvents: 'none',
             }}
