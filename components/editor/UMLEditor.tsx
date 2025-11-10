@@ -93,6 +93,110 @@ export default function UMLEditor({ diagram, workspaceId, userId, userName, onSa
     onSave(diagramData);
   }, [nodes, edges, onSave, userId]);
 
+  // Función para detectar y crear tabla intermedia para relaciones N:N
+  const createIntermediateTable = useCallback((edge: Edge, sourceNode: Node, targetNode: Node) => {
+    const multiplicity = edge.data?.multiplicity;
+
+    // Detectar si es muchos a muchos
+    const isSourceMany = multiplicity?.source?.includes('*') || multiplicity?.source === '*';
+    const isTargetMany = multiplicity?.target?.includes('*') || multiplicity?.target === '*';
+
+    if (!isSourceMany || !isTargetMany) {
+      return null;
+    }
+
+    console.log('🔄 Detectada relación N:N, creando tabla intermedia...');
+
+    // Nombre de la tabla intermedia
+    const sourceClassName = sourceNode.data.name.toLowerCase();
+    const targetClassName = targetNode.data.name.toLowerCase();
+    const intermediateTableName = `${sourceClassName}_${targetClassName}`;
+
+    // Posición en el medio entre las dos clases
+    const intermediatePosition = {
+      x: (sourceNode.position.x + targetNode.position.x) / 2,
+      y: (sourceNode.position.y + targetNode.position.y) / 2 + 50,
+    };
+
+    // Crear la clase intermedia
+    const intermediateClass: UMLClass = {
+      id: `class-${Date.now()}-intermediate`,
+      name: intermediateTableName,
+      position: intermediatePosition,
+      attributes: [
+        {
+          id: `attr-${Date.now()}-1`,
+          name: 'id',
+          type: 'Long',
+          stereotype: 'id',
+          nullable: false,
+          unique: true,
+        },
+        {
+          id: `attr-${Date.now()}-2`,
+          name: `${sourceClassName}_id`,
+          type: 'Long',
+          stereotype: 'fk',
+          nullable: false,
+          unique: false,
+        },
+        {
+          id: `attr-${Date.now()}-3`,
+          name: `${targetClassName}_id`,
+          type: 'Long',
+          stereotype: 'fk',
+          nullable: false,
+          unique: false,
+        },
+      ],
+      methods: [],
+      stereotypes: ['entity'],
+    };
+
+    const intermediateNode: Node = {
+      id: intermediateClass.id,
+      type: 'umlClass',
+      position: intermediatePosition,
+      data: intermediateClass,
+    };
+
+    // Crear las dos relaciones: source -> intermediate y intermediate -> target
+    const edgeToIntermediate: Edge = {
+      id: `edge-${Date.now()}-1`,
+      source: sourceNode.id,
+      target: intermediateNode.id,
+      type: 'umlRelationship',
+      data: {
+        label: `has ${intermediateTableName}`,
+        type: 'ASSOCIATION',
+        multiplicity: {
+          source: '1',
+          target: '*',
+        },
+      },
+    };
+
+    const edgeFromIntermediate: Edge = {
+      id: `edge-${Date.now()}-2`,
+      source: intermediateNode.id,
+      target: targetNode.id,
+      type: 'umlRelationship',
+      data: {
+        label: `references ${targetClassName}`,
+        type: 'ASSOCIATION',
+        multiplicity: {
+          source: '*',
+          target: '1',
+        },
+      },
+    };
+
+    return {
+      intermediateNode,
+      newEdges: [edgeToIntermediate, edgeFromIntermediate],
+    };
+  }, []);
+
   // Handle Delete key to remove selected nodes and edges
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -242,30 +346,46 @@ export default function UMLEditor({ diagram, workspaceId, userId, userName, onSa
       }
 
       if (diagram.data.relations) {
-        const initialEdges: Edge[] = diagram.data.relations.map((relation) => ({
-          id: relation.id,
-          source: relation.sourceClassId,
-          target: relation.targetClassId,
-          sourceHandle: relation.sourceHandle || null,
-          targetHandle: relation.targetHandle || null,
-          type: 'umlRelationship', // Usar edge type personalizado
-          data: {
-            label: relation.name,
-            type: relation.type as any,
-            multiplicity: relation.multiplicity ? {
-              source: relation.multiplicity.split(':')[0],
-              target: relation.multiplicity.split(':')[1]
-            } : undefined
+        const initialEdges: Edge[] = diagram.data.relations.map((relation) => {
+          // Parsear multiplicity: puede ser string "1:*" o objeto {source: "1", target: "*"}
+          let multiplicityObj;
+          if (relation.multiplicity) {
+            if (typeof relation.multiplicity === 'string') {
+              // Es un string, necesitamos parsearlo
+              const parts = relation.multiplicity.split(':');
+              multiplicityObj = {
+                source: parts[0] || '',
+                target: parts[1] || ''
+              };
+            } else {
+              // Ya es un objeto, usarlo directamente
+              multiplicityObj = relation.multiplicity;
+            }
           }
-        }));
+
+          return {
+            id: relation.id,
+            source: relation.sourceClassId,
+            target: relation.targetClassId,
+            sourceHandle: relation.sourceHandle || null,
+            targetHandle: relation.targetHandle || null,
+            type: 'umlRelationship', // Usar edge type personalizado
+            data: {
+              label: relation.name,
+              type: relation.type as any,
+              multiplicity: multiplicityObj,
+              intermediateTable: relation.intermediateTable, // Agregar tabla intermedia
+            }
+          };
+        });
         setEdges(initialEdges);
-        console.log('✅ Cargados', initialEdges.length, 'edges desde BD:', initialEdges.map(e => ({
-          id: e.id,
-          label: e.data?.label,
-          type: e.data?.type,
-          sourceHandle: e.sourceHandle,
-          targetHandle: e.targetHandle
-        })));
+        console.log('✅ Cargados', initialEdges.length, 'edges desde BD');
+        initialEdges.forEach(e => {
+          console.log(`   Edge ${e.id}: ${e.source} -> ${e.target}`);
+          console.log(`      Label: ${e.data?.label}, Type: ${e.data?.type}`);
+          console.log(`      Multiplicidad:`, e.data?.multiplicity);
+          console.log(`      Tabla intermedia:`, e.data?.intermediateTable);
+        });
       }
 
       setIsInitialized(true);
@@ -468,16 +588,51 @@ export default function UMLEditor({ diagram, workspaceId, userId, userName, onSa
 
   // Handle relationship update
   const onUpdateRelationship = useCallback((updatedRelationship: any) => {
+    // Buscar el edge original
+    const originalEdge = edges.find(e => e.id === updatedRelationship.id);
+    if (!originalEdge) return;
+
+    // Verificar si es una relación muchos a muchos
+    const isSourceMany = updatedRelationship.multiplicity?.source?.includes('*') || updatedRelationship.multiplicity?.source === '*';
+    const isTargetMany = updatedRelationship.multiplicity?.target?.includes('*') || updatedRelationship.multiplicity?.target === '*';
+    const isManyToMany = isSourceMany && isTargetMany;
+
+    // Actualizar la relación
     setEdges((eds) => {
       const updatedEdges = eds.map((edge) => {
         if (edge.id === updatedRelationship.id) {
+          const newEdgeData: any = {
+            label: updatedRelationship.label,
+            type: isManyToMany ? 'ManyToMany' : updatedRelationship.type,
+            multiplicity: updatedRelationship.multiplicity,
+          };
+
+          // Si es N:N, agregar información de tabla intermedia
+          if (isManyToMany) {
+            const sourceNode = nodes.find(n => n.id === originalEdge.source);
+            const targetNode = nodes.find(n => n.id === originalEdge.target);
+
+            if (sourceNode && targetNode) {
+              const sourceClassName = sourceNode.data.name.toLowerCase();
+              const targetClassName = targetNode.data.name.toLowerCase();
+              const intermediateTableName = `${sourceClassName}_${targetClassName}`;
+
+              newEdgeData.intermediateTable = {
+                name: intermediateTableName,
+                attributes: [
+                  'id: Long [PK]',
+                  `${sourceClassName}_id: Long [FK]`,
+                  `${targetClassName}_id: Long [FK]`
+                ]
+              };
+
+              console.log(`✨ Relación N:N marcada con tabla intermedia: ${intermediateTableName}`);
+            }
+          }
+
           return {
             ...edge,
-            data: {
-              label: updatedRelationship.label,
-              type: updatedRelationship.type,
-              multiplicity: updatedRelationship.multiplicity,
-            },
+            data: newEdgeData,
           };
         }
         return edge;
@@ -497,9 +652,13 @@ export default function UMLEditor({ diagram, workspaceId, userId, userName, onSa
 
       return updatedEdges;
     });
+
     setIsEditingRelationship(false);
     setSelectedEdge(null);
-  }, [setEdges, socket, isConnected, emit, diagram.id, userId]);
+
+    // Guardar cambios
+    setTimeout(() => handleSave(), 100);
+  }, [setEdges, nodes, edges, socket, isConnected, emit, diagram.id, userId, handleSave]);
 
   // handleSave is defined above, near the top of the component
 
@@ -582,16 +741,39 @@ export default function UMLEditor({ diagram, workspaceId, userId, userName, onSa
         data: umlClass,
       }));
 
-      const newEdges = umlModel.relations?.map((relation: any) => ({
-        id: relation.id,
-        source: relation.sourceClassId,
-        target: relation.targetClassId,
-        type: 'umlRelationship',
-        data: {
-          label: relation.name,
-          type: relation.type,
+      const newEdges = umlModel.relations?.map((relation: any) => {
+        // Parsear multiplicity si es string
+        let multiplicityObj = relation.multiplicity;
+        if (typeof relation.multiplicity === 'string' && relation.multiplicity.includes(':')) {
+          const parts = relation.multiplicity.split(':');
+          multiplicityObj = {
+            source: parts[0] || '',
+            target: parts[1] || ''
+          };
         }
-      })) || [];
+
+        // Detectar si es muchos a muchos
+        const isSourceMany = multiplicityObj?.source?.includes('*');
+        const isTargetMany = multiplicityObj?.target?.includes('*');
+        const isManyToMany = isSourceMany && isTargetMany;
+
+        console.log(`🔗 Creando edge ${relation.id}: ${relation.sourceClassId} -> ${relation.targetClassId}`);
+        console.log(`   Multiplicidad:`, multiplicityObj);
+        console.log(`   Es N:N: ${isManyToMany}`);
+
+        return {
+          id: relation.id,
+          source: relation.sourceClassId,
+          target: relation.targetClassId,
+          type: 'umlRelationship',
+          data: {
+            label: relation.name,
+            type: relation.type,
+            multiplicity: multiplicityObj, // ¡AGREGAR MULTIPLICIDAD!
+            intermediateTable: relation.intermediateTable, // ¡AGREGAR TABLA INTERMEDIA!
+          }
+        };
+      }) || [];
 
       console.log('📊 Aplicando nodos:', newNodes.length, 'edges:', newEdges.length);
 

@@ -5,10 +5,14 @@ import { EdgeProps, getSmoothStepPath, EdgeLabelRenderer, BaseEdge } from 'react
 
 interface UMLRelationshipData {
   label?: string;
-  type?: 'ASSOCIATION' | 'AGGREGATION' | 'COMPOSITION' | 'INHERITANCE' | 'DEPENDENCY' | 'REALIZATION';
+  type?: 'ASSOCIATION' | 'AGGREGATION' | 'COMPOSITION' | 'INHERITANCE' | 'DEPENDENCY' | 'REALIZATION' | 'ManyToMany';
   multiplicity?: {
     source?: string;
     target?: string;
+  };
+  intermediateTable?: {
+    name: string;
+    attributes?: string[];
   };
 }
 
@@ -36,12 +40,32 @@ export default function UMLRelationshipEdge({
     borderRadius: 8, // Esquinas redondeadas sutiles
   });
 
+  // Detectar relación muchos a muchos
+  const isManyToMany = () => {
+    const source = data?.multiplicity?.source || '';
+    const target = data?.multiplicity?.target || '';
+
+    // Formatos: *, 0..*, 1..*, *..*, etc.
+    const isSourceMany = source.includes('*') || source === '*';
+    const isTargetMany = target.includes('*') || target === '*';
+
+    return isSourceMany && isTargetMany;
+  };
+
   const getEdgeStyle = () => {
     const baseStyle = {
       strokeWidth: selected ? 3 : 2,
       stroke: selected ? '#374151' : '#6b7280',
       ...style
     };
+
+    // Líneas discontinuas para relaciones muchos a muchos
+    if (isManyToMany()) {
+      return {
+        ...baseStyle,
+        strokeDasharray: '8,4',
+      };
+    }
 
     switch (data?.type) {
       case 'DEPENDENCY':
@@ -186,50 +210,112 @@ export default function UMLRelationshipEdge({
       />
 
       <EdgeLabelRenderer>
-        <div
-          style={{
-            position: 'absolute',
-            transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
-            fontSize: 11,
-            pointerEvents: 'all',
-          }}
-          className="nodrag nopan"
-        >
-          {/* Relationship Label */}
-          {data?.label && (
+        {/* Tabla Intermedia para relaciones N:N - Centro */}
+        {isManyToMany() && data?.intermediateTable ? (
+          <div
+            style={{
+              position: 'absolute',
+              transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
+              fontSize: 10,
+              pointerEvents: 'all',
+            }}
+            className="nodrag nopan"
+          >
             <div
-              className={`px-2 py-1 rounded shadow-sm border text-xs font-medium cursor-pointer hover:shadow transition-all ${
-                selected
-                  ? 'bg-gray-600 text-white border-gray-700 shadow-md'
-                  : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
+              className={`bg-gray-50 border-2 rounded shadow-md ${
+                selected ? 'border-gray-600' : 'border-gray-400'
               }`}
-              title="Doble clic para editar, Delete para eliminar"
+              style={{ minWidth: '120px' }}
             >
-              {data.label}
-              {selected && data.type && (
-                <div className="text-xs text-gray-200 mt-0.5">
-                  {data.type}
-                </div>
-              )}
+              {/* Header con <<entity>> */}
+              <div className="bg-gray-200 px-2 py-0.5 border-b border-gray-400 text-center">
+                <div className="text-[9px] text-gray-600">&lt;&lt;entity&gt;&gt;</div>
+                <div className="font-bold text-xs text-gray-800">{data.intermediateTable.name}</div>
+              </div>
+              {/* Atributos */}
+              <div className="px-2 py-1">
+                {data.intermediateTable.attributes && data.intermediateTable.attributes.length > 0 ? (
+                  data.intermediateTable.attributes.map((attr, idx) => (
+                    <div key={idx} className="text-[9px] text-gray-700">
+                      + {attr}
+                    </div>
+                  ))
+                ) : (
+                  <>
+                    <div className="text-[9px] text-gray-700">+ id: Long</div>
+                    <div className="text-[9px] text-gray-600 italic">+ [foreign keys]</div>
+                  </>
+                )}
+              </div>
+              <div className="px-2 py-0.5 border-t border-gray-300 text-center">
+                <div className="text-[8px] text-gray-500 italic">Sin métodos</div>
+              </div>
             </div>
-          )}
+          </div>
+        ) : (
+          /* Relationship Label - Centro (para relaciones no N:N) */
+          <div
+            style={{
+              position: 'absolute',
+              transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
+              fontSize: 11,
+              pointerEvents: 'all',
+            }}
+            className="nodrag nopan"
+          >
+            {data?.label && (
+              <div
+                className={`px-2 py-1 rounded shadow-sm border text-xs font-medium cursor-pointer hover:shadow transition-all ${
+                  selected
+                    ? 'bg-gray-600 text-white border-gray-700 shadow-md'
+                    : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
+                }`}
+                title="Doble clic para editar, Delete para eliminar"
+              >
+                {data.label}
+                {selected && data.type && (
+                  <div className="text-xs text-gray-200 mt-0.5">
+                    {data.type}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
-          {/* Multiplicity Labels */}
-          {data?.multiplicity && (
-            <div className="flex justify-between mt-1 space-x-4">
-              {data.multiplicity.source && (
-                <div className="bg-gray-100 px-1 py-0.5 rounded text-xs text-gray-700 font-mono border border-gray-300">
-                  {data.multiplicity.source}
-                </div>
-              )}
-              {data.multiplicity.target && (
-                <div className="bg-gray-100 px-1 py-0.5 rounded text-xs text-gray-700 font-mono border border-gray-300">
-                  {data.multiplicity.target}
-                </div>
-              )}
+        {/* Multiplicidad en extremo origen (source) */}
+        {data?.multiplicity?.source && (
+          <div
+            style={{
+              position: 'absolute',
+              transform: `translate(-50%, -50%) translate(${sourceX}px,${sourceY}px)`,
+              fontSize: 11,
+              pointerEvents: 'none',
+            }}
+            className="nodrag nopan"
+          >
+            <div className="bg-white px-1.5 py-0.5 rounded text-xs text-gray-800 font-semibold border border-gray-400 shadow-sm">
+              {data.multiplicity.source}
             </div>
-          )}
-        </div>
+          </div>
+        )}
+
+        {/* Multiplicidad en extremo destino (target) */}
+        {data?.multiplicity?.target && (
+          <div
+            style={{
+              position: 'absolute',
+              transform: `translate(-50%, -50%) translate(${targetX}px,${targetY}px)`,
+              fontSize: 11,
+              pointerEvents: 'none',
+            }}
+            className="nodrag nopan"
+          >
+            <div className="bg-white px-1.5 py-0.5 rounded text-xs text-gray-800 font-semibold border border-gray-400 shadow-sm">
+              {data.multiplicity.target}
+            </div>
+          </div>
+        )}
       </EdgeLabelRenderer>
     </>
   );

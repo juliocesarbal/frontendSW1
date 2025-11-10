@@ -46,12 +46,21 @@ export enum RelationType {
 export interface UMLRelation {
   id: string;
   type: RelationType;
-  multiplicity?: string;
+  multiplicity?: string | {
+    source?: string;
+    target?: string;
+  };
   name?: string;
   sourceClassId: string;
   targetClassId: string;
   sourceHandle?: string; // top, right, bottom, left
   targetHandle?: string; // top, right, bottom, left
+  // Tabla intermedia para relaciones muchos a muchos
+  intermediateTable?: {
+    id: string;
+    name: string;
+    position: { x: number; y: number };
+  };
 }
 
 export interface Diagram {
