@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { EdgeProps, getSmoothStepPath, EdgeLabelRenderer, BaseEdge } from 'reactflow';
+import { EdgeProps, getSmoothStepPath, EdgeLabelRenderer, BaseEdge, Handle, Position } from 'reactflow';
 
 interface UMLRelationshipData {
   label?: string;
@@ -125,7 +125,9 @@ export default function UMLRelationshipEdge({
       case 'REALIZATION':
         return 'url(#dependency-arrow)';
       default:
-        return 'url(#association-arrow)';
+        // En UML de clases, las relaciones normales NO tienen flecha
+        // La dirección se indica con la multiplicidad
+        return undefined;
     }
   };
 
@@ -242,7 +244,7 @@ export default function UMLRelationshipEdge({
             className="nodrag nopan"
           >
             <div
-              className={`bg-gray-50 border-2 rounded shadow-md ${
+              className={`bg-gray-50 border-2 rounded shadow-md relative ${
                 selected ? 'border-gray-600' : 'border-gray-400'
               }`}
               style={{ minWidth: '120px' }}
@@ -270,6 +272,31 @@ export default function UMLRelationshipEdge({
               <div className="px-2 py-0.5 border-t border-gray-300 text-center">
                 <div className="text-[8px] text-gray-500 italic">Sin métodos</div>
               </div>
+
+              {/* Handles para la tabla intermedia - Igual que las clases normales */}
+              {/* RIGHT */}
+              <Handle type="source" position={Position.Right} id={`${id}-inter-right-1`} className="w-2 h-2 border border-gray-400 bg-gray-600 rounded-full" style={{ right: -4, top: '30%' }} />
+              <Handle type="target" position={Position.Right} id={`${id}-inter-right-1-in`} className="w-2 h-2 border border-gray-400 bg-gray-600 rounded-full" style={{ right: -4, top: '30%' }} />
+              <Handle type="source" position={Position.Right} id={`${id}-inter-right-2`} className="w-2 h-2 border border-gray-400 bg-gray-600 rounded-full" style={{ right: -4, top: '70%' }} />
+              <Handle type="target" position={Position.Right} id={`${id}-inter-right-2-in`} className="w-2 h-2 border border-gray-400 bg-gray-600 rounded-full" style={{ right: -4, top: '70%' }} />
+
+              {/* LEFT */}
+              <Handle type="source" position={Position.Left} id={`${id}-inter-left-1`} className="w-2 h-2 border border-gray-400 bg-gray-600 rounded-full" style={{ left: -4, top: '30%' }} />
+              <Handle type="target" position={Position.Left} id={`${id}-inter-left-1-in`} className="w-2 h-2 border border-gray-400 bg-gray-600 rounded-full" style={{ left: -4, top: '30%' }} />
+              <Handle type="source" position={Position.Left} id={`${id}-inter-left-2`} className="w-2 h-2 border border-gray-400 bg-gray-600 rounded-full" style={{ left: -4, top: '70%' }} />
+              <Handle type="target" position={Position.Left} id={`${id}-inter-left-2-in`} className="w-2 h-2 border border-gray-400 bg-gray-600 rounded-full" style={{ left: -4, top: '70%' }} />
+
+              {/* BOTTOM */}
+              <Handle type="source" position={Position.Bottom} id={`${id}-inter-bottom-1`} className="w-2 h-2 border border-gray-400 bg-gray-600 rounded-full" style={{ bottom: -4, left: '30%' }} />
+              <Handle type="target" position={Position.Bottom} id={`${id}-inter-bottom-1-in`} className="w-2 h-2 border border-gray-400 bg-gray-600 rounded-full" style={{ bottom: -4, left: '30%' }} />
+              <Handle type="source" position={Position.Bottom} id={`${id}-inter-bottom-2`} className="w-2 h-2 border border-gray-400 bg-gray-600 rounded-full" style={{ bottom: -4, left: '70%' }} />
+              <Handle type="target" position={Position.Bottom} id={`${id}-inter-bottom-2-in`} className="w-2 h-2 border border-gray-400 bg-gray-600 rounded-full" style={{ bottom: -4, left: '70%' }} />
+
+              {/* TOP */}
+              <Handle type="source" position={Position.Top} id={`${id}-inter-top-1`} className="w-2 h-2 border border-gray-400 bg-gray-600 rounded-full" style={{ top: -4, left: '30%' }} />
+              <Handle type="target" position={Position.Top} id={`${id}-inter-top-1-in`} className="w-2 h-2 border border-gray-400 bg-gray-600 rounded-full" style={{ top: -4, left: '30%' }} />
+              <Handle type="source" position={Position.Top} id={`${id}-inter-top-2`} className="w-2 h-2 border border-gray-400 bg-gray-600 rounded-full" style={{ top: -4, left: '70%' }} />
+              <Handle type="target" position={Position.Top} id={`${id}-inter-top-2-in`} className="w-2 h-2 border border-gray-400 bg-gray-600 rounded-full" style={{ top: -4, left: '70%' }} />
             </div>
           </div>
         ) : (

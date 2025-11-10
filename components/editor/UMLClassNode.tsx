@@ -164,80 +164,32 @@ const UMLClassNode = memo(({ data, selected }: NodeProps<UMLClassNodeData>) => {
         )}
       </div>
 
-      {/* Puntos de Conexión - 2 handles por lado: 1 source + 1 target */}
-      {/* Source (salida) y Target (entrada) separados claramente */}
+      {/* Puntos de Conexión - 4 handles separados por lado (2 source + 2 target) */}
+      {/* Todos con el mismo estilo - sin distinción visual entre tipos */}
 
-      {/* RIGHT - Source arriba, Target abajo */}
-      <Handle
-        type="source"
-        position={Position.Right}
-        id="right-source"
-        className="w-3 h-3 border-2 border-blue-400 bg-blue-600 rounded-full hover:bg-blue-700 hover:scale-125 transition-all"
-        style={{ right: -6, top: '35%' }}
-        title="Salida"
-      />
-      <Handle
-        type="target"
-        position={Position.Right}
-        id="right-target"
-        className="w-3 h-3 border-2 border-green-400 bg-green-600 rounded-full hover:bg-green-700 hover:scale-125 transition-all"
-        style={{ right: -6, top: '65%' }}
-        title="Entrada"
-      />
+      {/* RIGHT - 4 handles (source, target, source, target) */}
+      <Handle type="source" position={Position.Right} id="right-1" className="w-2.5 h-2.5 border-2 border-gray-300 bg-gray-600 rounded-full hover:bg-gray-700 hover:scale-125 transition-all" style={{ right: -5, top: '20%' }} />
+      <Handle type="target" position={Position.Right} id="right-2" className="w-2.5 h-2.5 border-2 border-gray-300 bg-gray-600 rounded-full hover:bg-gray-700 hover:scale-125 transition-all" style={{ right: -5, top: '40%' }} />
+      <Handle type="source" position={Position.Right} id="right-3" className="w-2.5 h-2.5 border-2 border-gray-300 bg-gray-600 rounded-full hover:bg-gray-700 hover:scale-125 transition-all" style={{ right: -5, top: '60%' }} />
+      <Handle type="target" position={Position.Right} id="right-4" className="w-2.5 h-2.5 border-2 border-gray-300 bg-gray-600 rounded-full hover:bg-gray-700 hover:scale-125 transition-all" style={{ right: -5, top: '80%' }} />
 
-      {/* LEFT - Source arriba, Target abajo */}
-      <Handle
-        type="source"
-        position={Position.Left}
-        id="left-source"
-        className="w-3 h-3 border-2 border-blue-400 bg-blue-600 rounded-full hover:bg-blue-700 hover:scale-125 transition-all"
-        style={{ left: -6, top: '35%' }}
-        title="Salida"
-      />
-      <Handle
-        type="target"
-        position={Position.Left}
-        id="left-target"
-        className="w-3 h-3 border-2 border-green-400 bg-green-600 rounded-full hover:bg-green-700 hover:scale-125 transition-all"
-        style={{ left: -6, top: '65%' }}
-        title="Entrada"
-      />
+      {/* LEFT - 4 handles (source, target, source, target) */}
+      <Handle type="source" position={Position.Left} id="left-1" className="w-2.5 h-2.5 border-2 border-gray-300 bg-gray-600 rounded-full hover:bg-gray-700 hover:scale-125 transition-all" style={{ left: -5, top: '20%' }} />
+      <Handle type="target" position={Position.Left} id="left-2" className="w-2.5 h-2.5 border-2 border-gray-300 bg-gray-600 rounded-full hover:bg-gray-700 hover:scale-125 transition-all" style={{ left: -5, top: '40%' }} />
+      <Handle type="source" position={Position.Left} id="left-3" className="w-2.5 h-2.5 border-2 border-gray-300 bg-gray-600 rounded-full hover:bg-gray-700 hover:scale-125 transition-all" style={{ left: -5, top: '60%' }} />
+      <Handle type="target" position={Position.Left} id="left-4" className="w-2.5 h-2.5 border-2 border-gray-300 bg-gray-600 rounded-full hover:bg-gray-700 hover:scale-125 transition-all" style={{ left: -5, top: '80%' }} />
 
-      {/* BOTTOM - Source izquierda, Target derecha */}
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        id="bottom-source"
-        className="w-3 h-3 border-2 border-blue-400 bg-blue-600 rounded-full hover:bg-blue-700 hover:scale-125 transition-all"
-        style={{ bottom: -6, left: '35%' }}
-        title="Salida"
-      />
-      <Handle
-        type="target"
-        position={Position.Bottom}
-        id="bottom-target"
-        className="w-3 h-3 border-2 border-green-400 bg-green-600 rounded-full hover:bg-green-700 hover:scale-125 transition-all"
-        style={{ bottom: -6, left: '65%' }}
-        title="Entrada"
-      />
+      {/* BOTTOM - 4 handles (source, target, source, target) */}
+      <Handle type="source" position={Position.Bottom} id="bottom-1" className="w-2.5 h-2.5 border-2 border-gray-300 bg-gray-600 rounded-full hover:bg-gray-700 hover:scale-125 transition-all" style={{ bottom: -5, left: '20%' }} />
+      <Handle type="target" position={Position.Bottom} id="bottom-2" className="w-2.5 h-2.5 border-2 border-gray-300 bg-gray-600 rounded-full hover:bg-gray-700 hover:scale-125 transition-all" style={{ bottom: -5, left: '40%' }} />
+      <Handle type="source" position={Position.Bottom} id="bottom-3" className="w-2.5 h-2.5 border-2 border-gray-300 bg-gray-600 rounded-full hover:bg-gray-700 hover:scale-125 transition-all" style={{ bottom: -5, left: '60%' }} />
+      <Handle type="target" position={Position.Bottom} id="bottom-4" className="w-2.5 h-2.5 border-2 border-gray-300 bg-gray-600 rounded-full hover:bg-gray-700 hover:scale-125 transition-all" style={{ bottom: -5, left: '80%' }} />
 
-      {/* TOP - Source izquierda, Target derecha */}
-      <Handle
-        type="source"
-        position={Position.Top}
-        id="top-source"
-        className="w-3 h-3 border-2 border-blue-400 bg-blue-600 rounded-full hover:bg-blue-700 hover:scale-125 transition-all"
-        style={{ top: -6, left: '35%' }}
-        title="Salida"
-      />
-      <Handle
-        type="target"
-        position={Position.Top}
-        id="top-target"
-        className="w-3 h-3 border-2 border-green-400 bg-green-600 rounded-full hover:bg-green-700 hover:scale-125 transition-all"
-        style={{ top: -6, left: '65%' }}
-        title="Entrada"
-      />
+      {/* TOP - 4 handles (source, target, source, target) */}
+      <Handle type="source" position={Position.Top} id="top-1" className="w-2.5 h-2.5 border-2 border-gray-300 bg-gray-600 rounded-full hover:bg-gray-700 hover:scale-125 transition-all" style={{ top: -5, left: '20%' }} />
+      <Handle type="target" position={Position.Top} id="top-2" className="w-2.5 h-2.5 border-2 border-gray-300 bg-gray-600 rounded-full hover:bg-gray-700 hover:scale-125 transition-all" style={{ top: -5, left: '40%' }} />
+      <Handle type="source" position={Position.Top} id="top-3" className="w-2.5 h-2.5 border-2 border-gray-300 bg-gray-600 rounded-full hover:bg-gray-700 hover:scale-125 transition-all" style={{ top: -5, left: '60%' }} />
+      <Handle type="target" position={Position.Top} id="top-4" className="w-2.5 h-2.5 border-2 border-gray-300 bg-gray-600 rounded-full hover:bg-gray-700 hover:scale-125 transition-all" style={{ top: -5, left: '80%' }} />
     </div>
   );
 });
