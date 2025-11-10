@@ -78,6 +78,7 @@ export default function UMLEditor({ diagram, workspaceId, userId, userName, onSa
           undefined,
         sourceHandle: edge.sourceHandle || undefined,
         targetHandle: edge.targetHandle || undefined,
+        intermediateTable: edge.data?.intermediateTable || undefined, // AÑADIDO: Guardar tabla intermedia
       } as UMLRelation)),
       metadata: {
         lastModified: new Date().toISOString(),
@@ -89,7 +90,8 @@ export default function UMLEditor({ diagram, workspaceId, userId, userName, onSa
       id: e.id,
       label: e.data?.label,
       type: e.data?.type,
-      multiplicity: e.data?.multiplicity
+      multiplicity: e.data?.multiplicity,
+      intermediateTable: e.data?.intermediateTable // AÑADIDO: Log para debug
     })));
 
     onSave(diagramData);
