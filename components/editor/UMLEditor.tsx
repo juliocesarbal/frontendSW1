@@ -1014,19 +1014,19 @@ export default function UMLEditor({ diagram, workspaceId, userId, userName, onSa
 
       console.log('📊 Aplicando nodos:', newNodes.length, 'edges:', newEdges.length, 'intermediate tables:', intermediateTableNodes.length);
 
-      // Update nodes and edges - IMPORTANT: Agregar a los existentes, no reemplazar
+      // Update nodes and edges - IMPORTANT: Reemplazar completamente con lo generado por IA
       let finalNodes: any[] = [];
       let finalEdges: any[] = [];
 
-      setNodes((existingNodes) => {
-        finalNodes = [...existingNodes, ...newNodes, ...intermediateTableNodes];
-        console.log('✅ Nodos totales después de IA:', finalNodes.length);
+      setNodes(() => {
+        finalNodes = [...newNodes, ...intermediateTableNodes];
+        console.log('✅ Nodos totales después de IA (REPLACED):', finalNodes.length);
         return finalNodes;
       });
 
-      setEdges((existingEdges) => {
-        finalEdges = [...existingEdges, ...newEdges];
-        console.log('✅ Edges totales después de IA:', finalEdges.length);
+      setEdges(() => {
+        finalEdges = [...newEdges];
+        console.log('✅ Edges totales después de IA (REPLACED):', finalEdges.length);
         return finalEdges;
       });
 
