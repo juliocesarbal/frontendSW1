@@ -884,8 +884,18 @@ export default function UMLEditor({ diagram, workspaceId, userId, userName, onSa
 
   // Handle UML generation from AI
   const handleUMLGenerated = useCallback((umlModel: any) => {
-    if (umlModel.classes) {
-      console.log('🤖 IA generó modelo:', umlModel);
+    try {
+      console.log('🤖 IA generó modelo completo:', JSON.stringify(umlModel, null, 2));
+
+      if (!umlModel) {
+        throw new Error('umlModel is null or undefined');
+      }
+
+      if (!umlModel.classes) {
+        throw new Error('umlModel.classes is missing');
+      }
+
+      console.log(`📊 Procesando ${umlModel.classes.length} clases...`);
 
       const newNodes = umlModel.classes.map((umlClass: any) => ({
         id: umlClass.id,
@@ -1047,9 +1057,19 @@ export default function UMLEditor({ diagram, workspaceId, userId, userName, onSa
         }
 
         // Save to database
-        handleSave();
-        console.log('💾 Diagrama guardado en BD');
+        console.log('💾 Intentando guardar diagrama en BD...');
+        try {
+          handleSave();
+          console.log('✅ Diagrama guardado exitosamente en BD');
+        } catch (saveError) {
+          console.error('❌ Error al guardar diagrama:', saveError);
+        }
       }, 500);
+    } catch (error) {
+      console.error('❌❌❌ ERROR EN handleUMLGenerated ❌❌❌');
+      console.error('Error completo:', error);
+      console.error('Stack:', (error as Error).stack);
+      throw error; // Re-lanzar para que lo capture el catch del AIChatInterface
     }
   }, [setNodes, setEdges, handleSave, socket, isConnected, emit, diagram.id, userId]);
 
