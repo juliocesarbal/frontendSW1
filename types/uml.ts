@@ -60,6 +60,7 @@ export interface UMLRelation {
     id: string;
     name: string;
     position: { x: number; y: number };
+    attributes?: string[]; // Format: "name: Type [STEREOTYPE]"
   };
 }
 

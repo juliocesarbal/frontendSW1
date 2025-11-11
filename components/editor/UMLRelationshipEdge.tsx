@@ -233,7 +233,8 @@ export default function UMLRelationshipEdge({
 
       <EdgeLabelRenderer>
         {/* Tabla Intermedia para relaciones N:N - Centro */}
-        {isManyToMany() && data?.intermediateTable ? (
+        {/* NOTA: Ya no mostramos la tabla aquí porque ahora se crean como nodos reales */}
+        {false && isManyToMany() && data?.intermediateTable ? (
           <div
             style={{
               position: 'absolute',
@@ -252,12 +253,12 @@ export default function UMLRelationshipEdge({
               {/* Header con <<entity>> */}
               <div className="bg-gray-200 px-2 py-0.5 border-b border-gray-400 text-center">
                 <div className="text-[9px] text-gray-600">&lt;&lt;entity&gt;&gt;</div>
-                <div className="font-bold text-xs text-gray-800">{data.intermediateTable.name}</div>
+                <div className="font-bold text-xs text-gray-800">{data?.intermediateTable?.name}</div>
               </div>
               {/* Atributos */}
               <div className="px-2 py-1">
-                {data.intermediateTable.attributes && data.intermediateTable.attributes.length > 0 ? (
-                  data.intermediateTable.attributes.map((attr, idx) => (
+                {(data?.intermediateTable?.attributes?.length ?? 0) > 0 ? (
+                  data!.intermediateTable!.attributes!.map((attr, idx) => (
                     <div key={idx} className="text-[9px] text-gray-700">
                       + {attr}
                     </div>
