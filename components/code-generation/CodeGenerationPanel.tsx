@@ -10,20 +10,22 @@ interface CodeGenerationPanelProps {
 }
 
 export default function CodeGenerationPanel({ diagramId, diagramName }: CodeGenerationPanelProps) {
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [generationResult, setGenerationResult] = useState<any>(null);
+  const [isGeneratingBackend, setIsGeneratingBackend] = useState(false);
+  const [isGeneratingFrontend, setIsGeneratingFrontend] = useState(false);
+  const [backendResult, setBackendResult] = useState<any>(null);
+  const [frontendResult, setFrontendResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
 
   const handleGenerateSpringBoot = async () => {
-    setIsGenerating(true);
+    setIsGeneratingBackend(true);
     setError(null);
-    setGenerationResult(null);
+    setBackendResult(null);
 
     try {
       const result = await codeGenAPI.generateSpringBoot(diagramId);
 
       if (result.success) {
-        setGenerationResult(result);
+        setBackendResult(result);
       } else {
         setError(result.error || 'Failed to generate Spring Boot project');
       }
@@ -31,15 +33,36 @@ export default function CodeGenerationPanel({ diagramId, diagramName }: CodeGene
       console.error('Code generation error:', error);
       setError(error.response?.data?.error || 'Failed to generate Spring Boot project');
     } finally {
-      setIsGenerating(false);
+      setIsGeneratingBackend(false);
     }
   };
 
-  const handleDownload = async () => {
-    if (!generationResult?.generatedCodeId) return;
+  const handleGenerateFlutter = async () => {
+    setIsGeneratingFrontend(true);
+    setError(null);
+    setFrontendResult(null);
 
     try {
-      const blob = await codeGenAPI.downloadProject(generationResult.generatedCodeId);
+      const result = await codeGenAPI.generateFlutter(diagramId);
+
+      if (result.success) {
+        setFrontendResult(result);
+      } else {
+        setError(result.error || 'Failed to generate Flutter project');
+      }
+    } catch (error: any) {
+      console.error('Flutter generation error:', error);
+      setError(error.response?.data?.error || 'Failed to generate Flutter project');
+    } finally {
+      setIsGeneratingFrontend(false);
+    }
+  };
+
+  const handleDownloadBackend = async () => {
+    if (!backendResult?.generatedCodeId) return;
+
+    try {
+      const blob = await codeGenAPI.downloadProject(backendResult.generatedCodeId);
 
       // Create download link
       const url = window.URL.createObjectURL(blob);
@@ -52,7 +75,28 @@ export default function CodeGenerationPanel({ diagramId, diagramName }: CodeGene
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Download error:', error);
-      setError('Failed to download project');
+      setError('Failed to download backend project');
+    }
+  };
+
+  const handleDownloadFrontend = async () => {
+    if (!frontendResult?.generatedCodeId) return;
+
+    try {
+      const blob = await codeGenAPI.downloadProject(frontendResult.generatedCodeId);
+
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${diagramName.toLowerCase().replace(/\s+/g, '-')}-flutter.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Download error:', error);
+      setError('Failed to download frontend project');
     }
   };
 
@@ -63,58 +107,126 @@ export default function CodeGenerationPanel({ diagramId, diagramName }: CodeGene
         <h3 className="text-lg font-semibold text-gray-900">Code Generation</h3>
       </div>
 
-      <div className="space-y-4">
-        <div>
+      <div className="space-y-6">
+        {/* Backend Section - Spring Boot */}
+        <div className="border border-gray-200 rounded-lg p-4">
+          <h4 className="text-md font-semibold text-gray-900 mb-3">Backend - Spring Boot</h4>
           <p className="text-sm text-gray-600 mb-3">
-            Generate a complete Spring Boot project from your UML diagram.
+            Generate a complete Spring Boot REST API from your UML diagram.
           </p>
 
           <button
             onClick={handleGenerateSpringBoot}
-            disabled={isGenerating}
+            disabled={isGeneratingBackend}
             className={`w-full flex items-center justify-center space-x-2 py-3 px-4 rounded-md font-medium transition-colors ${
-              isGenerating
+              isGeneratingBackend
                 ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                 : 'bg-blue-600 text-white hover:bg-blue-700'
             }`}
           >
-            {isGenerating ? (
+            {isGeneratingBackend ? (
               <>
                 <Loader2 size={16} className="animate-spin" />
-                <span>Generating Project...</span>
+                <span>Generating Backend...</span>
               </>
             ) : (
               <>
                 <Code size={16} />
-                <span>Generate Spring Boot Project</span>
+                <span>Generate Spring Boot Backend</span>
               </>
             )}
           </button>
-        </div>
 
-        {/* Success Message */}
-        {generationResult && (
-          <div className="bg-green-50 border border-green-200 rounded-md p-4">
-            <div className="flex items-start space-x-2">
-              <CheckCircle size={16} className="text-green-600 mt-0.5 flex-shrink-0" />
-              <div className="flex-1">
-                <h4 className="text-sm font-medium text-green-800 mb-1">
-                  Project Generated Successfully!
-                </h4>
-                <p className="text-xs text-green-700 mb-3">
-                  {generationResult.message}
-                </p>
-                <button
-                  onClick={handleDownload}
-                  className="flex items-center space-x-2 px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm"
-                >
-                  <Download size={14} />
-                  <span>Download ZIP</span>
-                </button>
+          {backendResult && (
+            <div className="bg-green-50 border border-green-200 rounded-md p-4 mt-3">
+              <div className="flex items-start space-x-2">
+                <CheckCircle size={16} className="text-green-600 mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <h5 className="text-sm font-medium text-green-800 mb-1">
+                    Backend Generated Successfully!
+                  </h5>
+                  <p className="text-xs text-green-700 mb-3">{backendResult.message}</p>
+                  <button
+                    onClick={handleDownloadBackend}
+                    className="flex items-center space-x-2 px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm"
+                  >
+                    <Download size={14} />
+                    <span>Download Spring Boot ZIP</span>
+                  </button>
+                </div>
               </div>
             </div>
+          )}
+
+          <div className="bg-gray-50 rounded-md p-3 mt-3">
+            <p className="text-xs font-medium text-gray-900 mb-1">Includes:</p>
+            <ul className="text-xs text-gray-600 space-y-0.5">
+              <li>• JPA Entities, DTOs, Repositories</li>
+              <li>• REST Controllers with CRUD endpoints</li>
+              <li>• PostgreSQL database configuration</li>
+            </ul>
           </div>
-        )}
+        </div>
+
+        {/* Frontend Section - Flutter */}
+        <div className="border border-gray-200 rounded-lg p-4">
+          <h4 className="text-md font-semibold text-gray-900 mb-3">Frontend - Flutter</h4>
+          <p className="text-sm text-gray-600 mb-3">
+            Generate a complete Flutter mobile app consuming your Spring Boot API.
+          </p>
+
+          <button
+            onClick={handleGenerateFlutter}
+            disabled={isGeneratingFrontend}
+            className={`w-full flex items-center justify-center space-x-2 py-3 px-4 rounded-md font-medium transition-colors ${
+              isGeneratingFrontend
+                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                : 'bg-purple-600 text-white hover:bg-purple-700'
+            }`}
+          >
+            {isGeneratingFrontend ? (
+              <>
+                <Loader2 size={16} className="animate-spin" />
+                <span>Generating Frontend...</span>
+              </>
+            ) : (
+              <>
+                <Code size={16} />
+                <span>Generate Flutter Frontend</span>
+              </>
+            )}
+          </button>
+
+          {frontendResult && (
+            <div className="bg-green-50 border border-green-200 rounded-md p-4 mt-3">
+              <div className="flex items-start space-x-2">
+                <CheckCircle size={16} className="text-green-600 mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <h5 className="text-sm font-medium text-green-800 mb-1">
+                    Frontend Generated Successfully!
+                  </h5>
+                  <p className="text-xs text-green-700 mb-3">{frontendResult.message}</p>
+                  <button
+                    onClick={handleDownloadFrontend}
+                    className="flex items-center space-x-2 px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm"
+                  >
+                    <Download size={14} />
+                    <span>Download Flutter ZIP</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="bg-gray-50 rounded-md p-3 mt-3">
+            <p className="text-xs font-medium text-gray-900 mb-1">Includes:</p>
+            <ul className="text-xs text-gray-600 space-y-0.5">
+              <li>• Models, Services, Screens (CRUD)</li>
+              <li>• Material Design UI</li>
+              <li>• Auto-configured to consume Spring Boot API</li>
+            </ul>
+          </div>
+        </div>
 
         {/* Error Message */}
         {error && (
@@ -130,20 +242,6 @@ export default function CodeGenerationPanel({ diagramId, diagramName }: CodeGene
             </div>
           </div>
         )}
-
-        {/* Features List */}
-        <div className="bg-gray-50 rounded-md p-4">
-          <h4 className="text-sm font-medium text-gray-900 mb-2">Generated Project Includes:</h4>
-          <ul className="text-xs text-gray-600 space-y-1">
-            <li>• JPA Entity classes with annotations</li>
-            <li>• Repository interfaces (Spring Data JPA)</li>
-            <li>• Service layer with CRUD operations</li>
-            <li>• REST Controllers with endpoints</li>
-            <li>• Spring Boot application configuration</li>
-            <li>• Maven build configuration (pom.xml)</li>
-            <li>• PostgreSQL database configuration</li>
-          </ul>
-        </div>
       </div>
     </div>
   );

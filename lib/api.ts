@@ -145,7 +145,16 @@ export const aiAPI = {
 // Code Generation API
 export const codeGenAPI = {
   generateSpringBoot: async (diagramId: string) => {
-    const response = await api.post(`/code-generation/spring-boot/${diagramId}`);
+    const response = await api.post(`/code-generation/spring-boot/${diagramId}`, {}, {
+      timeout: 60000, // 60 segundos para generación de código
+    });
+    return response.data;
+  },
+
+  generateFlutter: async (diagramId: string) => {
+    const response = await api.post(`/code-generation/flutter/${diagramId}`, {}, {
+      timeout: 60000, // 60 segundos para generación de código Flutter
+    });
     return response.data;
   },
 
