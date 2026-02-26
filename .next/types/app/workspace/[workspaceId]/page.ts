@@ -1,4 +1,4 @@
-// File: C:\Users\julio\OneDrive\Escritorio\Proyectostodo\Proyectos\SW1P2\frontendSW1\app\workspace\[workspaceId]\page.tsx
+// File: C:\Users\julio\OneDrive\Escritorio\General\ProyectosPaDesplegar\ProyectoSW1\frontendSW1\app\workspace\[workspaceId]\page.tsx
 import * as entry from '../../../../../app/workspace/[workspaceId]/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 
